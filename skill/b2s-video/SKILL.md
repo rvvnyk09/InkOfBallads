@@ -1,6 +1,6 @@
 ---
 name: b2s-video
-description: Make the InkOfBallads "Singing Notebook" lyric videos from a b2s song folder (a b2s song JSON plus its MP3) with the local b2s-video program - checked page-turn timings, the full 9:16 video with the InkOfBallads logos and a 16:9 version that frames the 9:16 notebook for regular YouTube, a Short cut from the 9:16, thumbnails from the cover (9:16 opening slide and 16:9), and a browser preview. Use this skill whenever the user asks to create, make, render or redo a video, lyric video, Short, Reel, TikTok, thumbnail or preview for a song or song folder (for example "create video for ...\CreateVideo\some-song"), wants page timings checked or fixed, or asks how to run b2s-video, even if they do not name the program. Not for writing lyrics (that is the b2s skill) or upload titles and descriptions (video-upload-metadata).
+description: Make the InkOfBallads "Singing Notebook" lyric videos from a b2s song folder (a b2s song JSON plus its MP3) with the local b2s-video program - checked page-turn timings, the full 9:16 video with the InkOfBallads logos and a 16:9 version that frames the 9:16 notebook for regular YouTube, a Short cut from the 9:16, thumbnails from the cover (9:16 opening slide and 16:9), a browser preview, and a plain-text copy of the song JSON's YouTube upload text (`<folder>-youtube.txt`) ready to paste. Use this skill whenever the user asks to create, make, render or redo a video, lyric video, Short, Reel, TikTok, thumbnail or preview for a song or song folder (for example "create video for ...\CreateVideo\some-song"), wants page timings checked or fixed, wants the upload text as a plain text file, or asks how to run b2s-video, even if they do not name the program. Not for writing lyrics (that is the b2s skill) or for writing upload titles and descriptions (video-upload-metadata writes them into the JSON; this skill only lays them out as text).
 ---
 
 # b2s-video: Singing Notebook lyric videos
@@ -18,6 +18,7 @@ The user writes songs with the b2s skill, generates the music elsewhere, and kee
 | Cover logo (gold line art, transparent) | `C:\RV\Laptop Backup - 07.09.2022\Work\Book\InkOfBallads_lineart.png` |
 | Tab mark (quill only, transparent) | `C:\RV\Laptop Backup - 07.09.2022\Work\Book\InkOfBallads_quill.png` |
 | Timing checker | `scripts/check_timings.py` in this skill |
+| Upload text writer | `scripts/write_upload_text.py` in this skill (standard library only) |
 
 If a path does not exist, look for it nearby before asking; the user may have moved the folder. Use the Bash tool with forward slashes and quote every path, since they contain spaces. The program's README has the full option list; read it when the user asks for something this file does not cover.
 
@@ -31,7 +32,7 @@ If a path does not exist, look for it nearby before asking; the user may have mo
 - **Logos on**: `--logo` (cover, faint page watermark, The End page) and `--logo-mark` (quill on the page tabs).
 - **No `--channel`**: the user removed "Book to Song" text. With a logo, the cover shows the logo instead.
 - **Short**: verse 1 and the first chorus, cut from the full video, no fades at either end, under 60 s.
-- Outputs go in `<song-folder>\out\`, named after the folder: `<folder>-9x16.mp4`, `<folder>-16x9.mp4`, `<folder>-short-<N>s.mp4` (N = rounded length), `<folder>-thumbnail.jpg` (16:9), `<folder>-thumbnail-9x16.jpg`, `<folder>-preview.html`, `sheet-9x16.png`.
+- Outputs go in `<song-folder>\out\`, named after the folder: `<folder>-9x16.mp4`, `<folder>-16x9.mp4`, `<folder>-short-<N>s.mp4` (N = rounded length), `<folder>-thumbnail.jpg` (16:9), `<folder>-thumbnail-9x16.jpg`, `<folder>-preview.html`, `sheet-9x16.png`, and `<folder>-youtube.txt` (the upload text, step 8) once the song JSON has a `youtube` block.
 
 ## Workflow
 
@@ -120,11 +121,24 @@ Read both JPGs and check that the title, "after ..." line and logo are sharp and
 
 Make it in 9:16 (the user's preview format). One HTML file that plays the song in the template with the audio (Play button, space bar, seek bar). It finds the MP3 by relative path, so it must stay in `out\` beside the song folder.
 
-### 8. Check and report
+### 8. Upload text (plain text to copy and paste)
+
+When the song JSON has a `youtube` block (the video-upload-metadata skill adds it to the version), write it out as plain text, with no JSON quotes, brackets or escapes, so the user can paste each part straight into YouTube Studio:
+
+```
+"<program>/.venv/Scripts/python.exe" "<skill>/scripts/write_upload_text.py" --song "<json>" --out "<folder>/out/<folder>-youtube.txt"
+```
+
+The file has a section for the regular video and one for the Short, each with the title, description, tags (comma-separated for the Tags box), thumbnail text, pinned comment and Studio settings, and character counts against YouTube's limits. It also reads the older layout (description and tags shared at the top of the block) and the upload skill's standalone `<folder>.metadata.json`. It prints any `{PLACEHOLDER}` still in the text (such as `{FULL_VIDEO_URL}`); tell the user to fill those in after uploading. It replaces a file it wrote before, but refuses any other file at that path without `--force`.
+
+Run it again **whenever the `youtube` block changes** (a new description, more tags, a new title), including when the video-upload-metadata skill updated the JSON in a turn without any video work. The JSON stays the source: change the text there, never only in the `.txt`. If the JSON has no `youtube` block, skip this step and mention that the video-upload-metadata skill can write one.
+
+### 9. Check and report
 
 Grab a few frames to confirm what you made (the cover with the logo, a lyric page with watermark and quill tab, The End page): `ffmpeg -v error -y -i <video> -vf "select='eq(n\,30)+eq(n\,450)',scale=300:-1,tile=2x1" -frames:v 1 <png>` and Read the image. Do the same for the 16:9 file (scale to 480 wide) and check that the notebook sits in the middle on an even background with the logo on the right. Then tell the user, in plain words:
 
 - each file's path (as a clickable link) and length,
+- the upload text file, if written, and any placeholders left in it,
 - that the 16:9 file and the 16:9 thumbnail are for the regular YouTube upload, and the Short (or 9:16) with the 9:16 thumbnail for Shorts, Reels and TikTok,
 - which page times you changed and why ("page 5 turned during 'merry and strong'; moved to 1:00.0"),
 - anything still uncertain (lines Whisper did not hear, tight gaps),
@@ -139,4 +153,4 @@ Grab a few frames to confirm what you made (the cover with the logo, a lyric pag
 
 ## If the user asks how to run it themselves
 
-Give them the commands from steps 2 to 7 with their folder's real file names filled in, one command per code block, and point them to `program\README.md` for every option.
+Give them the commands from steps 2 to 8 with their folder's real file names filled in, one command per code block, and point them to `program\README.md` for every option.
