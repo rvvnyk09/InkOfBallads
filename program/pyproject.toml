@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "b2s-video"
+version = "0.1.0"
+description = "Turn a b2s song JSON and an MP3 into a page-turn lyric video"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+dependencies = ["playwright==1.55.0"]
+
+[project.optional-dependencies]
+dev = ["pytest==8.4.2"]
+align = ["stable-ts==2.19.1", "demucs==4.1.0"]
+
+[project.scripts]
+b2s-video = "b2s_video.cli:main"
+
+[tool.setuptools]
+packages = ["b2s_video"]
+
+[tool.setuptools.package-data]
+b2s_video = ["template.html", "notebook.html", "assets/fonts/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["browser: needs Chromium (playwright install chromium)", "ffmpeg: needs ffmpeg and ffprobe on PATH"]

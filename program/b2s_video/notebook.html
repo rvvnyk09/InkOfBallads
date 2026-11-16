@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>b2s-video notebook page</title>
+<style>
+/* The spiral notebook look (from spiral-flipbook-purple.html). Fonts are bundled next to this file.
+   Nothing is loaded from the internet. Sizes are design pixels; #scene is zoomed to the video. */
+@font-face{font-family:"B2S Caveat";src:url("assets/fonts/Caveat-500.woff2") format("woff2");font-weight:500;font-style:normal}
+@font-face{font-family:"B2S Caveat";src:url("assets/fonts/Caveat-700.woff2") format("woff2");font-weight:700;font-style:normal}
+:root{--ink:#6a2a62;--desk:#3d4f3a;--rule:#aac6e4;--marker:rgba(255,214,90,.62)}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;transition:none!important;animation:none!important}
+html,body{overflow:hidden}
+body{background:
+  radial-gradient(ellipse at 50% 40%, rgba(255,255,255,.14), transparent 65%),
+  repeating-linear-gradient(92deg, rgba(0,0,0,.07) 0 2px, transparent 2px 9px, rgba(255,255,255,.03) 9px 11px, transparent 11px 23px),
+  var(--desk);
+  font-family:"B2S Caveat",cursive}
+#scene{position:absolute}
+#book{position:absolute;left:18px;top:6px;perspective:1900px;perspective-origin:0% 50%;--fs:25px;--pitch:34px}
+.base{position:absolute;inset:0;border-radius:3px 9px 9px 3px;background:#fdfbf3;
+  box-shadow:3px 3px 0 #f1ede2,6px 6px 0 #e6e1d3,9px 9px 0 #dad4c5,12px 12px 0 #cfc8b8,0 26px 30px rgba(0,0,0,.5)}
+.sheet{position:absolute;inset:0;transform-origin:19px 50%;--k:1;--lh:calc(var(--pitch)*var(--k))}
+.face{position:absolute;inset:0;border-radius:3px 9px 9px 3px;overflow:hidden;
+  background-color:#fdfbf3;
+  background-image:radial-gradient(ellipse at 40% 15%, rgba(255,250,235,.9), transparent 65%),repeating-linear-gradient(0deg, rgba(120,100,60,.025) 0 1px, transparent 1px 3px)}
+/* The page is flat: renderAt shows the front for the first half of a turn and the back (mirrored) after. */
+.back{transform:scaleX(-1);display:none}
+.face::after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(90deg, rgba(70,50,20,.22), rgba(70,50,20,0) 9%)}
+.back::after{background:linear-gradient(270deg, rgba(70,50,20,.22), rgba(70,50,20,0) 9%),rgba(0,0,0,.04)}
+.shade{position:absolute;inset:0;background:#000;opacity:0;z-index:5}
+.ruled{position:absolute;top:46px;bottom:40px;left:0;right:0;
+  background:repeating-linear-gradient(to bottom, transparent 0 calc(var(--lh) - 1px), var(--rule) calc(var(--lh) - 1px) var(--lh))}
+.margin{position:absolute;top:0;bottom:0;left:74px;width:2px;background:rgba(214,84,84,.55);box-shadow:3px 0 0 rgba(214,84,84,.25)}
+.back .margin{left:auto;right:74px}
+.holes i{position:absolute;left:14px;width:10px;height:10px;border-radius:50%;
+  background:radial-gradient(circle at 40% 35%, #3b3b3b, #0d0d0d 70%);box-shadow:inset 0 1px 2px rgba(0,0,0,.9),0 1px 0 rgba(255,255,255,.6)}
+.back .holes i{left:auto;right:14px}
+/* right: clear of the purple tab, which overlaps the page edge by about 40px. */
+.content{position:absolute;top:46px;left:94px;right:46px;color:var(--ink)}
+.line{font-size:calc(var(--fs)*var(--k));line-height:var(--lh);font-weight:500;text-shadow:0 0 .5px currentColor;
+  padding-left:.6em;text-indent:-.6em;overflow-wrap:anywhere;text-wrap:balance;--a:.28;color:rgb(106 42 98 / var(--a));transform:translateY(calc(var(--lh)*-.09))}
+.line:nth-child(3n){transform:translateY(calc(var(--lh)*-.09)) rotate(-.25deg)}
+.line:nth-child(3n+1){transform:translateY(calc(var(--lh)*-.12)) rotate(.2deg)}
+.line span{border-radius:.2em;box-decoration-break:clone;-webkit-box-decoration-break:clone}
+.line.on span{background:linear-gradient(transparent 38%, var(--marker) 38% 88%, transparent 88%)}
+.pn{position:absolute;bottom:8px;right:30px;font-size:20px;color:#7b7a73}
+.note-doodle{position:absolute;right:58px;bottom:34px;opacity:.7}
+.center{position:absolute;top:46px;bottom:40px;left:94px;right:40px;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;text-align:center;color:var(--ink);overflow:hidden}
+.center .t{font-size:calc(46px*var(--k));font-weight:700;line-height:1.1;transform:rotate(-1deg);overflow-wrap:anywhere}
+.center .s{font-size:calc(25px*var(--k));opacity:.8;margin-top:.4em;overflow-wrap:anywhere}
+.center .orn{opacity:.75}
+/* The spiral is one SVG: rotated CSS boxes with shadows antialiased differently from frame to frame. */
+.coils{position:absolute;left:-16px;top:0;z-index:500;pointer-events:none;overflow:visible}
+.face.cover{background:
+  radial-gradient(ellipse at 35% 20%, rgba(255,255,255,.18), transparent 60%),
+  repeating-linear-gradient(45deg, rgba(0,0,0,.07) 0 2px, transparent 2px 5px),
+  linear-gradient(160deg,#6d2d65,#4a1d45 60%,#3a1536)}
+.face.cover::after{background:linear-gradient(90deg, rgba(0,0,0,.35), rgba(0,0,0,0) 10%),linear-gradient(0deg, rgba(0,0,0,.18), transparent 25%)}
+.cover .holes i{background:radial-gradient(circle at 40% 35%, #111, #000 70%);box-shadow:inset 0 1px 2px #000,0 1px 0 rgba(255,255,255,.25)}
+.coverlabel{position:absolute;left:96px;right:44px;top:17%;bottom:25%;background:#fdfbf3;border-radius:4px;overflow:hidden;
+  box-shadow:0 3px 8px rgba(0,0,0,.5),inset 0 0 0 5px #fdfbf3,inset 0 0 0 7px rgba(106,42,98,.5);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:var(--ink);padding:20px 24px}
+.coverlabel .k{font-size:calc(26px*var(--k));opacity:.7;letter-spacing:.5px}
+.coverlabel .t{font-size:calc(54px*var(--k));font-weight:700;line-height:.95;margin:.22em 0 .18em;transform:rotate(-2deg);overflow-wrap:anywhere}
+.coverlabel .s{font-size:calc(23px*var(--k));opacity:.75;overflow-wrap:anywhere}
+.coverlabel .rule{flex:none;width:70%;height:2px;background:var(--ink);opacity:.35;margin:calc(12px*var(--k)) 0}
+.coverlabel svg{flex:none;width:calc(54px*var(--k));height:calc(54px*var(--k))}
+/* --logo inside the book is drawn in the page ink through a mask, whatever colour the image is. */
+.inked{background:var(--ink);-webkit-mask:var(--src) center/contain no-repeat;mask:var(--src) center/contain no-repeat}
+.watermark{position:absolute;left:94px;right:26px;top:22%;bottom:22%;opacity:.08}
+.end-logo{flex:none;height:calc(190px*var(--k));max-width:80%;margin-top:calc(30px*var(--k));opacity:.85}
+.tab .mark{height:26px;margin-top:4px;background:#fff}
+.cover-logo{position:absolute;left:96px;right:44px;bottom:3.5%;height:19%;width:calc(100% - 140px);object-fit:contain}
+.cover-name{position:absolute;left:96px;right:44px;bottom:9%;text-align:center;color:rgba(255,240,250,.75);font-size:26px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tab{position:absolute;right:-22px;top:150px;width:62px;height:34px;background:#6a2a62;border-radius:0 6px 6px 0;
+  color:#fff;font-size:21px;line-height:34px;padding-left:16px;box-shadow:2px 2px 4px rgba(0,0,0,.35)}
+/* While fitting, long words may not break, so they show up as overflow and shrink the page instead. */
+.measuring .line,.measuring .t,.measuring .s{overflow-wrap:normal}
+</style>
+</head>
+<body>
+<div id="scene"><div id="book"><div class="base"></div></div></div>
+<script>
+"use strict";
+const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+const ease = x => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+const TURN = 0.7, LEAD = 0.25, FADE = 0.35, DIM = 0.28, MIN_K = 0.4;
+const TOP = 46, BOTTOM = 40;   // ruled area of a page, in design pixels
+let PITCH = 34;                // line spacing; larger on 9:16 (see setup)
+let WRAP_K = 0.72, BOOK_H = 680;
+let S = null;
+
+const NOTE = '<svg viewBox="0 0 70 60" fill="none" stroke="#6a2a62" stroke-width="2.2" stroke-linecap="round"><path d="M22 44V12l28-6v32"/><ellipse cx="16" cy="46" rx="8" ry="6" fill="#6a2a62" fill-opacity=".15"/><ellipse cx="44" cy="40" rx="8" ry="6" fill="#6a2a62" fill-opacity=".15"/></svg>';
+
+function el(tag, cls, text) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text != null) e.textContent = text;
+  return e;
+}
+
+function svg(cls, size) {
+  const d = el("div", cls);
+  d.innerHTML = NOTE;
+  if (size) Object.assign(d.firstChild.style, { width: size + "px", height: size + "px" });
+  return d;
+}
+
+const rows = k => Math.floor((BOOK_H - TOP - BOTTOM) / (PITCH * k) + 1e-6);
+
+function overflows(sheet) {
+  const box = sheet.querySelector(".fit");
+  if (!box) return false;
+  if (box.classList.contains("content")) {
+    const k = parseFloat(sheet.style.getPropertyValue("--k"));
+    if (box.offsetHeight > rows(k) * PITCH * k + 0.5) return true;
+  } else if (box.scrollHeight > box.clientHeight + 0.5) return true;
+  for (const e of box.querySelectorAll(".line,.t,.s"))
+    if (e.scrollWidth > e.clientWidth + 1) return true;
+  return false;
+}
+
+function wraps(sheet) {
+  for (const l of sheet.querySelectorAll(".line"))
+    if (l.offsetHeight > parseFloat(getComputedStyle(l).lineHeight) * 1.5) return true;
+  return false;
+}
+
+// The largest scale (down to WRAP_K) at which each lyric line of a page stays on one ruled line.
+function noWrapScale(sheet) {
+  let k = 1;
+  sheet.style.setProperty("--k", k);
+  while (wraps(sheet) && k > WRAP_K) {
+    k = Math.max(WRAP_K, k * 0.97);
+    sheet.style.setProperty("--k", k);
+  }
+  return k;
+}
+
+// Shrink every font (and the ruling) on a page by the same factor, starting from k, until nothing is clipped.
+function fit(sheet, k) {
+  sheet.classList.add("measuring");
+  sheet.style.setProperty("--k", k);
+  while (overflows(sheet) && k > MIN_K) {
+    k = Math.max(MIN_K, k * 0.95);
+    sheet.style.setProperty("--k", k);
+  }
+  sheet.classList.remove("measuring");
+  return { k, fits: !overflows(sheet) };
+}
+
+// Put a page's lines on the ruling, a little above the middle of the page.
+function place(sheet, k) {
+  const c = sheet.querySelector(".content");
+  if (!c) return;
+  const lh = PITCH * k, used = Math.round(c.offsetHeight / lh);
+  c.style.top = TOP + Math.max(0, Math.floor((rows(k) - used) * 0.4)) * lh + "px";
+}
+
+function face(side, extra) {
+  const f = el("div", "face " + side + (extra ? " " + extra : ""));
+  if (extra !== "cover") f.append(el("div", "ruled"), el("div", "margin"));
+  const holes = el("div", "holes");
+  for (let y = 14; y < BOOK_H - 10; y += 22) { const i = el("i"); i.style.top = y + "px"; holes.append(i); }
+  f.append(holes);
+  return f;
+}
+
+async function imageRatio(src) {
+  const img = new Image();
+  img.src = src;
+  try { await img.decode(); } catch (e) { return 1; }
+  return img.naturalWidth / img.naturalHeight || 1;
+}
+
+// An element showing the image's shape in a flat colour (set by its class), at the image's proportions.
+function inked(src, cls, ratio) {
+  const d = el("div", "inked " + cls);
+  d.style.setProperty("--src", 'url("' + src + '")');
+  if (ratio) d.style.aspectRatio = String(ratio);
+  return d;
+}
+
+window.setup = async cfg => {
+  const { pages, starts, lines, W, H, title, work, channel, logo, mark, highlight } = cfg;   // the notebook cover has no author line
+  document.body.style.width = W + "px";
+  document.body.style.height = H + "px";
+  // 9:16: the notebook's own portrait page, kept above the bottom 15% (platform buttons).
+  // 16:9: a landscape page, so lyric lines fit on one row at a readable size.
+  const portrait = H > W;
+  const bookW = portrait ? 540 : 760;
+  BOOK_H = portrait ? 680 : 500;
+  WRAP_K = portrait ? 1 : 0.72;
+  // 9:16 is watched on phones: larger handwriting, and long lines wrap onto the next ruled line
+  // instead of shrinking the text.
+  PITCH = portrait ? 42 : 34;
+  const sceneW = bookW + 34, sceneH = BOOK_H + 40;
+  const usableH = portrait ? H * 0.85 : H;
+  const s = Math.min(W * (portrait ? 0.95 : 0.9) / sceneW, usableH * (portrait ? 0.92 : 0.9) / sceneH);
+  const scene = document.getElementById("scene"), book = document.getElementById("book");
+  // zoom, not transform: scale(), so pages are laid out and drawn at video size. A scaled 3D layer
+  // can keep a raster from an earlier frame, and then the same t would not give the same pixels.
+  Object.assign(scene.style, { left: (W - sceneW * s) / 2 / s + "px", top: (usableH - sceneH * s) / 2 / s + "px",
+                               width: sceneW + "px", height: sceneH + "px", zoom: s });
+  Object.assign(book.style, { width: bookW + "px", height: BOOK_H + "px" });
+  book.style.setProperty("--pitch", PITCH + "px");
+  book.style.setProperty("--fs", (portrait ? 31 : 25) + "px");
+  book.querySelectorAll(".sheet,.coils").forEach(e => e.remove());
+
+  const logoRatio = logo ? await imageRatio(logo) : 1, markRatio = mark ? await imageRatio(mark) : 1;
+  const N = pages.length;
+  let sectionNo = 0;
+  const sheets = pages.map((p, i) => {
+    const sheet = el("div", "sheet page-" + p.kind);
+    sheet.style.zIndex = N - i;
+    let front;
+    if (p.kind === "cover") {
+      front = face("front", "cover");
+      const label = el("div", "coverlabel fit");
+      label.append(el("div", "k", "Singing Notebook"), el("div", "rule"), el("div", "t", title));
+      if (work) label.append(el("div", "s", "after " + work));
+      label.append(el("div", "rule"), svg());
+      // A logo takes the place of the line at the bottom of the cover.
+      if (logo) { const img = el("img", "cover-logo"); img.src = logo; img.alt = ""; front.append(label, img); }
+      else front.append(label, el("div", "cover-name", channel || "songs & stories"));
+    } else if (p.kind === "back") {
+      front = face("front");
+      const c = el("div", "center fit");
+      c.append(el("div", "t", "The End"), el("div", "s", "thanks for listening"));
+      if (channel) c.append(el("div", "s", channel));
+      if (logo) c.append(inked(logo, "end-logo", logoRatio));
+      front.append(c);
+    } else {
+      sectionNo += 1;
+      front = face("front");
+      if (logo) front.append(inked(logo, "watermark"));      // faint, behind the lyrics
+      if (p.lines.length) {
+        const c = el("div", "content fit");
+        p.lines.forEach(t => { const l = el("div", "line"); l.append(el("span", null, t)); c.append(l); });
+        front.append(c, svg("note-doodle", 56));
+      } else {
+        const c = el("div", "center");
+        c.append(svg("orn", 110));
+        front.append(c);
+      }
+      front.append(el("div", "pn", String(sectionNo)));
+    }
+    // Every page but the cover has the purple tab, as in spiral-flipbook-purple.html: ♪, or the --logo-mark.
+    if (p.kind !== "cover") {
+      const tab = el("div", "tab", mark ? null : "♪");
+      if (mark) tab.append(inked(mark, "mark", markRatio));
+      sheet.append(tab);
+    }
+    const back = face("back");
+    for (const f of [front, back]) f.append(el("div", "shade"));
+    sheet.prepend(front, back);
+    book.append(sheet);
+    return sheet;
+  });
+  let rings = "";
+  for (let y = 14; y < BOOK_H - 10; y += 22)
+    rings += '<g transform="translate(2 ' + y + ') rotate(-6 22 3)"><rect x="1" y="2.5" width="44" height="6" rx="3" fill="#000" fill-opacity=".28"/>' +
+             '<rect width="44" height="6" rx="3" fill="url(#coil)"/><circle cx="38" cy="3" r="3" fill="url(#coilEnd)"/></g>';
+  const coils = el("div");
+  coils.innerHTML = '<svg class="coils" width="52" height="' + BOOK_H + '" viewBox="0 0 52 ' + BOOK_H + '"><defs>' +
+    '<linearGradient id="coil" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fafafa"/><stop offset=".35" stop-color="#b9bec4"/>' +
+    '<stop offset=".6" stop-color="#6f757c"/><stop offset="1" stop-color="#d5d9de"/></linearGradient>' +
+    '<radialGradient id="coilEnd" cx=".35" cy=".3" r=".7"><stop offset="0" stop-color="#e8eaed"/><stop offset="1" stop-color="#6b7077"/></radialGradient>' +
+    '</defs>' + rings + '</svg>';
+  book.append(coils.firstChild);
+
+  const faces = ['500 40px "B2S Caveat"', '700 40px "B2S Caveat"'];
+  await Promise.all(faces.map(f => document.fonts.load(f)));
+  await Promise.all([...book.querySelectorAll("img")].map(i => i.decode().catch(() => {})));
+  const fontsOk = faces.every(f => document.fonts.check(f));
+
+  // One text size for every lyric page, so the size and ruling do not jump between pages. A page that
+  // still has too much text shrinks further on its own.
+  const lyric = sheets.filter((sh, i) => pages[i].kind === "section" && pages[i].lines.length);
+  const bookK = Math.min(1, ...lyric.map(noWrapScale));
+  const fitInfo = sheets.map((sh, i) => {
+    const kind = pages[i].kind;
+    const f = fit(sh, kind === "section" ? bookK : 1);
+    // A page with no lines takes the book's ruling. Cover and back text use their own size.
+    if (kind === "section" && !pages[i].lines.length) sh.style.setProperty("--k", bookK);
+    place(sh, f.k);
+    return f;
+  });
+  S = { pages, sheets, N, starts, lines, highlight: !!highlight };
+  window.renderAt(0);
+  return { fontsOk, k: fitInfo.map(f => f.k), overflow: fitInfo.map((f, i) => f.fits ? 0 : i + 1).filter(Boolean) };
+};
+
+// A pure function of time: the same t always draws the same frame. Every page, shown or not, gets
+// all of its state set, so nothing is left over from an earlier frame.
+window.renderAt = t => {
+  const { pages, sheets, N, starts, lines, highlight } = S;
+  let cur = 0;
+  for (let i = 0; i < N; i++) if (t >= starts[i]) cur = i;
+  sheets.forEach((sheet, j) => {
+    let p = 0;
+    if (j < N - 1) p = clamp((t - (starts[j + 1] - LEAD)) / TURN, 0, 1);
+    // A fully turned page is taken out of the layout, not just hidden: a hidden 3D layer over the
+    // spiral would make the coils draw differently depending on earlier frames.
+    sheet.style.display = p < 1 && j >= cur - 1 && j <= cur + 2 ? "" : "none";
+    const e = ease(p);
+    const shade = p > 0 && p < 1 ? Math.round(160 * Math.sin(Math.PI * e)) / 1000 : 0;
+    sheet.style.transform = p > 0 ? "rotateY(" + (-178 * e) + "deg)" : "none";
+    // Past 90 degrees the back of the page faces the camera. The turned page fades out near the end of its swing.
+    const past = e > 0.5;
+    sheet.querySelector(".front").style.display = past ? "none" : "";
+    sheet.querySelector(".back").style.display = past ? "block" : "none";
+    sheet.style.opacity = 1 - clamp((p - 0.62) / 0.38, 0, 1);
+    sheet.querySelectorAll(".shade").forEach(sh => { sh.style.opacity = shade; });
+    const tab = sheet.querySelector(".tab");
+    if (tab) tab.style.display = !past && (j <= cur || t >= starts[j] - LEAD) ? "" : "none";
+    const lt = lines[j];
+    sheet.querySelectorAll(".line").forEach((l, k) => {
+      if (lt === null) { l.style.setProperty("--a", 1); l.classList.remove("on"); return; }
+      const [ls, le] = lt[k];
+      const on = j < cur ? 1 : j > cur ? 0 : clamp((t - ls) / FADE, 0, 1);
+      // Dimmed with the text colour, not opacity, so a line never gets its own compositing layer.
+      l.style.setProperty("--a", DIM + (1 - DIM) * on);
+      l.classList.toggle("on", highlight && j === cur && t >= ls && t < le);
+    });
+  });
+};
+</script>
+</body>
+</html>

@@ -1,0 +1,142 @@
+---
+name: b2s-video
+description: Make the InkOfBallads "Singing Notebook" lyric videos from a b2s song folder (a b2s song JSON plus its MP3) with the local b2s-video program - checked page-turn timings, the full 9:16 video with the InkOfBallads logos and a 16:9 version that frames the 9:16 notebook for regular YouTube, a Short cut from the 9:16, thumbnails from the cover (9:16 opening slide and 16:9), and a browser preview. Use this skill whenever the user asks to create, make, render or redo a video, lyric video, Short, Reel, TikTok, thumbnail or preview for a song or song folder (for example "create video for ...\CreateVideo\some-song"), wants page timings checked or fixed, or asks how to run b2s-video, even if they do not name the program. Not for writing lyrics (that is the b2s skill) or upload titles and descriptions (video-upload-metadata).
+---
+
+# b2s-video: Singing Notebook lyric videos
+
+The user writes songs with the b2s skill, generates the music elsewhere, and keeps each song in its own folder under `CreateVideo`. This skill turns such a folder into finished videos with the user's b2s-video program. Accuracy of the page turns is what makes or breaks these videos: a page that turns while a line is still being sung looks broken, and the program's automatic timings got several pages wrong on every song so far. So most of the care goes into step 2.
+
+## Where things are
+
+| What | Path |
+|---|---|
+| Song folders | `C:\RV\Laptop Backup - 07.09.2022\Work\Book\CreateVideo\<song-folder>` |
+| Program (and its README) | `C:\RV\Laptop Backup - 07.09.2022\Work\Book\CreateVideo\program` |
+| Main venv (render, preview, contact sheet) | `program\.venv\Scripts\b2s-video.exe` |
+| Alignment venv (Whisper, suggest-timing, this skill's checker) | `program\.venv-align\Scripts\` (`b2s-video.exe`, `python.exe`) |
+| Cover logo (gold line art, transparent) | `C:\RV\Laptop Backup - 07.09.2022\Work\Book\InkOfBallads_lineart.png` |
+| Tab mark (quill only, transparent) | `C:\RV\Laptop Backup - 07.09.2022\Work\Book\InkOfBallads_quill.png` |
+| Timing checker | `scripts/check_timings.py` in this skill |
+
+If a path does not exist, look for it nearby before asking; the user may have moved the folder. Use the Bash tool with forward slashes and quote every path, since they contain spaces. The program's README has the full option list; read it when the user asks for something this file does not cover.
+
+## Defaults (what the user has chosen)
+
+- **Both formats**: 9:16 (1080x1920) for Shorts, Reels and TikTok, and 16:9 (1920x1080) for regular YouTube. YouTube files every square or vertical upload of 3 minutes or less as a Short, with no way to opt out, so the 16:9 file is what the user uploads as the regular video. The 16:9 file is the **framed 9:16**: the 9:16 video's notebook centred in a 1920x1080 frame on the same green background, with the gold logo on the right (step 4). The program's own `--format 16x9` template draws a landscape notebook that fills the screen with small lyrics; the user found it too big, so do not use it for the video unless asked.
+- **If the user asks whether a 9:16 video can be a regular YouTube video**: only if it is longer than 3 minutes (for example by holding The End page longer), and YouTube then shows it with side bars on desktop and TV. For songs under 3 minutes the framed 16:9 is the answer.
+- **Background colour**: forest green, the template's `--desk` colour in `program/b2s_video/notebook.html`. The program has no option for it yet. The user has seen mock-ups of midnight navy, walnut wood, charcoal slate, deep teal and burgundy (burgundy blends with the purple cover). Changing the colour is a template change (see "Things to avoid"); after it, the bottom strip the 16:9 background is taken from changes colour with it, so the framed 16:9 needs no other change. Mock-ups need no program change: recolour the green pixels of a 9:16 frame (green where G > R+4, G > B+4 and R < 120), scaling the new colour by each pixel's brightness so the texture and shadow stay.
+- **Thumbnails**: two. The user's preferred one is the 9:16 video's opening slide (the notebook cover at 1 s), saved as it is, 1080x1920 JPG, for Shorts, Reels and TikTok covers. There is also the 16:9 cover, 1280x720 JPG, for the regular YouTube upload (YouTube shows regular-video thumbnails as 16:9, so a 9:16 image would get side bars there). Never change the 9:16 or 16:9 videos to add a thumbnail (no title slide spliced in): the user said so. The user has seen designed title thumbnails (big title on a purple cover, a notebook page, a chorus line) and chose the plain opening slide; do not make designed ones unless asked.
+- **Notebook look**, the program's default. No `--line-timing` flag: the default `all` shows each page's lines at once, which the user wants; the running line-by-line effect (`even`) and `--highlight` stay off unless asked.
+- **Logos on**: `--logo` (cover, faint page watermark, The End page) and `--logo-mark` (quill on the page tabs).
+- **No `--channel`**: the user removed "Book to Song" text. With a logo, the cover shows the logo instead.
+- **Short**: verse 1 and the first chorus, cut from the full video, no fades at either end, under 60 s.
+- Outputs go in `<song-folder>\out\`, named after the folder: `<folder>-9x16.mp4`, `<folder>-16x9.mp4`, `<folder>-short-<N>s.mp4` (N = rounded length), `<folder>-thumbnail.jpg` (16:9), `<folder>-thumbnail-9x16.jpg`, `<folder>-preview.html`, `sheet-9x16.png`.
+
+## Workflow
+
+### 1. Look at the folder
+
+List it and read the song JSON. Note the title, the sections (each `[Tag]` section becomes one notebook page; the page count is sections + 2 for cover and back cover) and the MP3's name and length (`ffprobe -v error -show_entries format=duration -of csv=p=0 "<mp3>"`). If the JSON has a `versions` array, the program picks the version whose title matches the MP3 name; otherwise pass `--version`. If there is a `turns.txt`, read it: real times in it are the user's work.
+
+### 2. Get page-turn timings and check them
+
+Each timestamp is when a page starts; the page swings from 0.25 s before it to 0.45 s after. A good time puts the whole swing in the pause between the last word of one section and the first word of the next.
+
+1. If there is no usable `turns.txt` (missing, or only `00:00` placeholders), make a first draft:
+   ```
+   "<program>/.venv-align/Scripts/b2s-video.exe" suggest-timing --song "<json>" --audio "<mp3>" --out "<folder>/out/turns.suggested.txt"
+   ```
+2. Check the draft (or the user's own file) against what is actually sung:
+   ```
+   "<program>/.venv-align/Scripts/python.exe" "<skill>/scripts/check_timings.py" --song "<json>" --audio "<mp3>" --turns "<turns file>" --write "<folder>/turns.txt"
+   ```
+   It transcribes the song with Whisper (cached next to the MP3 as `<mp3>.words.json`), then for every turn prints `ok`, `tight` (the pause is shorter than the swing; the time is already the best possible) or `CLASH` with the words sung during the swing and a suggested time. `--write` saves the suggested times as a commented timing file; it refuses to overwrite without `--force`, and you should only pass `--force` over a file you made or one that holds only placeholders. Never overwrite timings the user typed in themselves without asking.
+3. Read the report rather than trusting it blindly. Whisper mishears sung words ("Merry men" comes out as "Mary men"), sometimes misses whole lines, and can match the wrong line. Lines marked "check by ear" or a suggestion that moves a page more than about 2 s deserve a second look at the transcription (`<mp3>.words.json`) around that time. Adjust the written file by hand where needed, and keep a short comment per page saying what is sung there, so the user can follow your reasoning.
+4. Run the checker once more on the final file. Every page should be `ok` or `tight`.
+
+### 3. Contact sheet
+
+```
+"<program>/.venv/Scripts/b2s-video.exe" contact-sheet --song "<json>" --audio "<mp3>" --turns-file "<folder>/turns.txt" --format 9x16 --logo "<lineart>" --logo-mark "<quill>" --out "<folder>/out/sheet-9x16.png"
+```
+
+Look at the image (Read it). Check that each page shows its own section, no text is clipped or runs under the purple tab, the cover title fits, and The End page shows the logo. The render prints a warning if a page has too much text; a section that long is better split by the user than shrunk.
+
+### 4. Render the full videos
+
+Render the 9:16 video:
+
+```
+"<program>/.venv/Scripts/b2s-video.exe" render --song "<json>" --audio "<mp3>" --turns-file "<folder>/turns.txt" --format 9x16 --logo "<lineart>" --logo-mark "<quill>" --out "<folder>/out/<folder>-9x16.mp4"
+```
+
+It renders at roughly real time (a 2.5-minute song takes about 2.5 minutes), so give it a 10-minute timeout, or run it in the background and do other steps meanwhile. If the laptop may sleep during a long run, ask the app to keep it awake (`request_keep_awake`); one render that the machine slept through took 3 hours. If an output file already exists and you are replacing it, write to a `.new.mp4` name and move it over the old one only after it succeeds.
+
+Then build the 16:9 video from it with ffmpeg (no second render, about a minute per song):
+
+```
+ffmpeg -v error -y -i "<folder>/out/<folder>-9x16.mp4" -loop 1 -i "<lineart>" -filter_complex "[0:v]split[a][b];[a]crop=1080:300:0:1610,scale=1920:1080,setsar=1[bg];[b]crop=1080:1620:0:0,scale=720:1080:flags=lanczos,setsar=1[fg];[1:v]scale=320:-1[logo];[bg][fg]overlay=600:0[t];[t][logo]overlay=1540:(H-h)/2,format=yuv420p[v]" -map "[v]" -map 0:a -shortest -c:v libx264 -preset medium -crf 20 -r 30 -color_range tv -colorspace bt709 -color_primaries bt709 -color_trc bt709 -c:a copy -movflags +faststart "<folder>/out/<folder>-16x9.mp4"
+```
+
+How it works: the background is the 9:16 video's bottom strip (rows 1610 to 1910, always plain green) stretched to fill the frame; the notebook is rows 0 to 1620 of the 9:16 video, scaled to 720x1080 and centred at x=600; the logo sits at the right, vertically centred. Rows 0 to 1620 hold everything that moves, page swings included (measured on both songs: nothing drawn below row 1596). If the template's layout changes, measure again before trusting these numbers.
+
+Confirm both results with ffprobe: h264 at 1080x1920 and 1920x1080, aac, the MP3's duration. The 16:9 file is built from the finished 9:16, so rebuild it whenever the 9:16 is re-rendered.
+
+### 5. Cut the Short (from the 9:16 video)
+
+`check_timings.py` ends its report with a suggested Short (start, length, the last word inside it, and the ffmpeg command). The Short starts as the cover opens and ends after the first chorus's last word, before the next page begins to turn, so it neither cuts a word off nor ends mid-turn.
+
+```
+ffmpeg -v error -y -ss <start> -i "<folder>/out/<folder>-9x16.mp4" -t <length> -c:v libx264 -preset medium -crf 20 -pix_fmt yuv420p -color_range tv -colorspace bt709 -color_primaries bt709 -color_trc bt709 -c:a aac -b:a 192k -movflags +faststart "<folder>/out/<folder>-short-<N>s.mp4"
+```
+
+No fades: the user does not want them. When replacing an earlier Short, delete it first so the new file's created date is fresh (Windows keeps the old one otherwise, which confused the user once). Then verify the ending: transcribe the last 5 s of the Short with Whisper and make sure the chorus's last words are there.
+
+### 6. Thumbnails
+
+The 9:16 thumbnail is the opening slide of the finished 9:16 video, 1 s in:
+
+```
+ffmpeg -v error -y -ss 1 -i "<folder>/out/<folder>-9x16.mp4" -frames:v 1 -q:v 2 "<folder>/out/<folder>-thumbnail-9x16.jpg"
+```
+
+For the 16:9 thumbnail, save the cover as a still from the 16:9 template, 1 s in (the cover is fully shown), and scale it to YouTube's recommended 1280x720 JPG (the limit is 2 MB; this comes out near 120 KB):
+
+```
+"<program>/.venv/Scripts/b2s-video.exe" render --song "<json>" --audio "<mp3>" --turns-file "<folder>/turns.txt" --format 16x9 --logo "<lineart>" --logo-mark "<quill>" --still 1 --out "<scratchpad>/cover-16x9.png"
+```
+```
+ffmpeg -v error -y -i "<scratchpad>/cover-16x9.png" -vf "scale=1280:720:flags=lanczos" -q:v 2 "<folder>/out/<folder>-thumbnail.jpg"
+```
+
+Read both JPGs and check that the title, "after ..." line and logo are sharp and nothing is cut off. If the user wants different thumbnail text (a bigger title, a hook line), that is a template change: offer a mock-up first, as under "Things to avoid".
+
+### 7. Browser preview
+
+```
+"<program>/.venv/Scripts/b2s-video.exe" preview --song "<json>" --audio "<mp3>" --turns-file "<folder>/turns.txt" --format 9x16 --logo "<lineart>" --logo-mark "<quill>" --out "<folder>/out/<folder>-preview.html"
+```
+
+Make it in 9:16 (the user's preview format). One HTML file that plays the song in the template with the audio (Play button, space bar, seek bar). It finds the MP3 by relative path, so it must stay in `out\` beside the song folder.
+
+### 8. Check and report
+
+Grab a few frames to confirm what you made (the cover with the logo, a lyric page with watermark and quill tab, The End page): `ffmpeg -v error -y -i <video> -vf "select='eq(n\,30)+eq(n\,450)',scale=300:-1,tile=2x1" -frames:v 1 <png>` and Read the image. Do the same for the 16:9 file (scale to 480 wide) and check that the notebook sits in the middle on an even background with the logo on the right. Then tell the user, in plain words:
+
+- each file's path (as a clickable link) and length,
+- that the 16:9 file and the 16:9 thumbnail are for the regular YouTube upload, and the Short (or 9:16) with the 9:16 thumbnail for Shorts, Reels and TikTok,
+- which page times you changed and why ("page 5 turned during 'merry and strong'; moved to 1:00.0"),
+- anything still uncertain (lines Whisper did not hear, tight gaps),
+- that you checked frames and timings but did not watch or listen to the whole video, unless you did.
+
+## Things to avoid
+
+- Changing lyric wording or the song JSON. The video shows the lyrics exactly as written; if a line looks wrong, tell the user.
+- Uploading or publishing anything. These are local files; uploading is the user's step (the video-upload-metadata skill writes the upload text).
+- Overwriting the user's originals: their MP3, JSON, a hand-made `turns.txt`, or older videos that are not this skill's outputs. Earlier files from this workflow (same names in `out\`) may be replaced.
+- Editing the program itself during a video request. If the template needs a change (layout, new option), say so, show a mock-up still first, and change it only when the user agrees; the program has its own tests (`program/.venv/Scripts/python.exe -m pytest` from `program`).
+
+## If the user asks how to run it themselves
+
+Give them the commands from steps 2 to 7 with their folder's real file names filled in, one command per code block, and point them to `program\README.md` for every option.

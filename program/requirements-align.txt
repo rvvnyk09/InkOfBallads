@@ -1,0 +1,3 @@
+# Optional, only for `b2s-video suggest-timing`. Large: pulls in PyTorch and downloads a Whisper model on first use.
+stable-ts==2.19.1
+demucs==4.1.0

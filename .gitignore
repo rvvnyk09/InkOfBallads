@@ -1,0 +1,21 @@
+# Only the program, the skill and the logos are tracked.
+# Song folders (MP3s, rendered videos), mockups and scenery stay local.
+/*
+!/.gitignore
+!/README.md
+!/program/
+!/skill/
+!/logos/
+
+# Python environments, caches and build files
+.venv/
+.venv-*/
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/
+
+# Outputs, if any end up inside tracked folders
+out/
+*.mp3
+*.mp4

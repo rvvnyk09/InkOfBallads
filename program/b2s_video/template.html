@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>b2s-video page</title>
+<style>
+/* Fonts are bundled next to this file. Nothing is loaded from the internet. */
+@font-face{font-family:"B2S Fredoka";src:url("assets/fonts/Fredoka-Variable.ttf") format("truetype");font-weight:300 700;font-style:normal}
+@font-face{font-family:"B2S Lora";src:url("assets/fonts/Lora-Variable.ttf") format("truetype");font-weight:400 700;font-style:normal}
+@font-face{font-family:"B2S Lora";src:url("assets/fonts/Lora-Italic-Variable.ttf") format("truetype");font-weight:400 700;font-style:italic}
+:root{--ink:#2B2A26;--forest:#2F5D46;--berry:#A63446;--bg:#DCE3D8;--muted:#6B6554;--paper1:#F8F1DB;--paper2:#EEE3C2}
+*,*::before,*::after{transition:none!important;animation:none!important}
+html,body{margin:0;overflow:hidden;background:var(--bg)}
+#stage{position:absolute;perspective:4200px;font-family:"B2S Fredoka",sans-serif}
+#stage.classic{font-family:"B2S Lora",serif}
+.leaf{position:absolute;inset:0;transform-origin:left center;backface-visibility:hidden;--k:1;
+  background:linear-gradient(90deg,rgba(60,45,20,.22) 0,rgba(60,45,20,0) 7%),linear-gradient(180deg,var(--paper1),var(--paper2));
+  color:var(--ink);border-radius:5px 14px 14px 5px;box-shadow:0 10px 26px rgba(0,0,0,.18);
+  padding:9% 9% 11% 12%;display:flex;flex-direction:column;justify-content:center;box-sizing:border-box}
+.content{width:100%}
+.leaf.repeated::after{content:"";position:absolute;inset:3.5% 4% 3.5% 7%;border:calc(var(--u)*.7px) double var(--forest);border-radius:4px 8px 8px 4px;pointer-events:none}
+.cover .content,.back .content,.empty .content{text-align:center}
+.line{margin:.3em 0;font-size:calc(var(--u)*5px*var(--k));line-height:1.38;padding-left:.6em;text-indent:-.6em;opacity:.28;overflow-wrap:anywhere}
+h1{font-size:calc(var(--u)*10px*var(--k));line-height:1.1;margin:0 0 .4em;color:var(--forest);font-weight:600;overflow-wrap:anywhere}
+.sub{margin:0;font-size:calc(var(--u)*4.4px*var(--k));overflow-wrap:anywhere}
+.by{margin:.5em 0 0;font-size:calc(var(--u)*3.6px*var(--k));color:var(--muted);font-style:italic;overflow-wrap:anywhere}
+.orn{width:calc(var(--u)*14px);height:calc(var(--u)*1px);border-radius:3px;background:var(--berry);margin:1.2em auto}
+/* Ornament for a section with no lines: a dot, a diamond and a dot. Section tags are not shown. */
+.orn2{position:relative;width:calc(var(--u)*2.4px);height:calc(var(--u)*2.4px);margin:0 auto;background:var(--berry);transform:rotate(45deg);border-radius:2px}
+.orn2::before,.orn2::after{content:"";position:absolute;width:45%;height:45%;border-radius:50%;background:var(--forest);top:27.5%;left:27.5%}
+.orn2::before{transform:translate(calc(var(--u)*-3.3px),calc(var(--u)*3.3px))}
+.orn2::after{transform:translate(calc(var(--u)*3.3px),calc(var(--u)*-3.3px))}
+.pn{position:absolute;bottom:4.5%;left:0;right:0;text-align:center;font-size:calc(var(--u)*3px);color:var(--muted)}
+/* While fitting, long words may not break, so they show up as overflow and shrink the page instead. */
+.measuring .line,.measuring h1,.measuring .sub,.measuring .by{overflow-wrap:normal}
+</style>
+</head>
+<body>
+<div id="stage"></div>
+<script>
+"use strict";
+const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+const ease = x => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+const TURN = 0.7, LEAD = 0.25, FADE = 0.35, DIM = 0.28, MIN_K = 0.4;
+let WRAP_K = 0.72;   // 16:9; portrait pages have room to wrap, so they shrink less (see setup)
+const BERRY = "#A63446";
+let S = null;
+
+function el(tag, cls, text) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text != null) e.textContent = text;
+  return e;
+}
+
+function overflows(leaf) {
+  const content = leaf.querySelector(".content");
+  const cs = getComputedStyle(leaf);
+  const avail = leaf.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+  if (content.scrollHeight > avail + 0.5) return true;
+  for (const e of content.querySelectorAll(".line,h1,.sub,.by"))
+    if (e.scrollWidth > e.clientWidth + 1) return true;
+  return false;
+}
+
+function wraps(leaf) {
+  for (const l of leaf.querySelectorAll(".line"))
+    if (l.getBoundingClientRect().height > parseFloat(getComputedStyle(l).lineHeight) * 1.5) return true;
+  return false;
+}
+
+// The largest scale (down to WRAP_K) at which each lyric line of a page stays on one row.
+function noWrapScale(leaf) {
+  let k = 1;
+  leaf.style.setProperty("--k", k);
+  while (wraps(leaf) && k > WRAP_K) {
+    k = Math.max(WRAP_K, k * 0.97);
+    leaf.style.setProperty("--k", k);
+  }
+  return k;
+}
+
+// Shrink every font on a page by the same factor, starting from k, until nothing is clipped.
+// Lines too long for one row wrap.
+function fit(leaf, k) {
+  leaf.classList.add("measuring");
+  leaf.style.setProperty("--k", k);
+  while (overflows(leaf) && k > MIN_K) {
+    k = Math.max(MIN_K, k * 0.95);
+    leaf.style.setProperty("--k", k);
+  }
+  leaf.classList.remove("measuring");
+  return { k, fits: !overflows(leaf) };
+}
+
+window.setup = async cfg => {
+  const { pages, starts, lines, W, H, look, title, work, author, channel, highlight } = cfg;
+  document.body.style.width = W + "px";
+  document.body.style.height = H + "px";
+  // 9:16: a 3:4 portrait page kept above the bottom 15% (platform buttons).
+  // 16:9: a wider landscape page, so typical lyric lines fit on one row at a readable size.
+  let bookW, bookH, top, u;
+  if (H > W) {
+    const usable = H * 0.85;
+    bookW = W * 0.88; bookH = bookW / 0.75;
+    if (bookH > usable * 0.9) { bookH = usable * 0.9; bookW = bookH * 0.75; }
+    top = (usable - bookH) / 2;
+    u = bookW / 100;
+    WRAP_K = 0.9;
+  } else {
+    WRAP_K = 0.72;
+    bookH = H * 0.86; bookW = Math.min(bookH * 1.3, W * 0.9); top = (H - bookH) / 2;
+    u = bookH / 100;
+  }
+  const stage = document.getElementById("stage");
+  stage.className = look === "classic" ? "classic" : "";
+  Object.assign(stage.style, { left: (W - bookW) / 2 + "px", top: top + "px", width: bookW + "px", height: bookH + "px" });
+  stage.style.setProperty("--u", u);
+  stage.innerHTML = "";
+
+  const N = pages.length;
+  let sectionNo = 0;
+  const leaves = pages.map((p, i) => {
+    const leaf = el("div", "leaf " + p.kind), c = el("div", "content");
+    leaf.style.zIndex = N - i;
+    if (p.kind === "cover") {
+      c.append(el("h1", null, title));
+      if (work) c.append(el("p", "sub", "A song from the tale of " + work));
+      c.append(el("div", "orn"));
+      if (author) c.append(el("p", "by", author));
+    } else if (p.kind === "back") {
+      c.append(el("h1", null, "The end"), el("div", "orn"));
+      if (channel) c.append(el("p", "sub", channel));
+    } else {
+      sectionNo += 1;
+      if (p.repeated) leaf.classList.add("repeated");
+      if (!p.lines.length) leaf.classList.add("empty");
+      p.lines.forEach(t => c.append(el("div", "line", t)));
+      if (!p.lines.length) c.append(el("div", "orn2"));
+      leaf.append(el("div", "pn", String(sectionNo)));
+    }
+    leaf.prepend(c);
+    stage.append(leaf);
+    return leaf;
+  });
+
+  const faces = look === "classic"
+    ? ['400 40px "B2S Lora"', 'italic 400 40px "B2S Lora"', '600 40px "B2S Lora"']
+    : ['400 40px "B2S Fredoka"', '600 40px "B2S Fredoka"'];
+  await Promise.all(faces.map(f => document.fonts.load(f)));
+  const fontsOk = faces.every(f => document.fonts.check(f));
+
+  // One text size for every lyric page, so the size does not jump between pages. A page that
+  // still has too much text shrinks further on its own.
+  const lyric = leaves.filter((l, i) => pages[i].kind === "section" && pages[i].lines.length);
+  const bookK = Math.min(1, ...lyric.map(noWrapScale));
+  const fitInfo = leaves.map((l, i) => fit(l, pages[i].kind === "section" ? bookK : 1));
+  S = { pages, leaves, N, starts, lines, highlight: !!highlight };
+  window.renderAt(0);
+  return { fontsOk, k: fitInfo.map(f => f.k), overflow: fitInfo.map((f, i) => f.fits ? 0 : i + 1).filter(Boolean) };
+};
+
+// A pure function of time: the same t always draws the same frame.
+window.renderAt = t => {
+  const { pages, leaves, N, starts, lines, highlight } = S;
+  let cur = 0;
+  for (let i = 0; i < N; i++) if (t >= starts[i]) cur = i;
+  leaves.forEach((leaf, j) => {
+    const visible = j >= cur - 2 && j <= cur + 2;
+    leaf.style.display = visible ? "" : "none";
+    if (!visible) return;
+    if (j >= N - 1) { leaf.style.transform = "none"; leaf.style.filter = "none"; }
+    else {
+      const p = clamp((t - (starts[j + 1] - LEAD)) / TURN, 0, 1), e = ease(p);
+      leaf.style.transform = p > 0 ? "rotateY(" + (-180 * e) + "deg)" : "none";
+      leaf.style.filter = p > 0 && p < 1 ? "brightness(" + (1 - 0.18 * Math.sin(Math.PI * e)) + ")" : "none";
+    }
+    const lt = lines[j];
+    leaf.querySelectorAll(".line").forEach((l, k) => {
+      if (lt === null) { l.style.opacity = 1; l.style.color = ""; return; }
+      const [ls, le] = lt[k];
+      const on = j < cur ? 1 : j > cur ? 0 : clamp((t - ls) / FADE, 0, 1);
+      l.style.opacity = DIM + (1 - DIM) * on;
+      l.style.color = (highlight && j === cur && t >= ls && t < le) ? BERRY : "";
+    });
+  });
+};
+</script>
+</body>
+</html>

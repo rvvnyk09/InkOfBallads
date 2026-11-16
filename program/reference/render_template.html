@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>b2s page-turn renderer</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600&family=Lora:ital,wght@0,400;0,600;1,400&display=swap">
+<style>
+html,body{margin:0;overflow:hidden;background:#DCE3D8}
+#stage{position:absolute;perspective:4200px;font-family:"Fredoka","Trebuchet MS","DejaVu Sans",sans-serif}
+#stage.classic{font-family:"Lora",Georgia,"DejaVu Serif",serif}
+.leaf{position:absolute;inset:0;transform-origin:left center;backface-visibility:hidden;
+  background:linear-gradient(90deg,rgba(60,45,20,.22) 0,rgba(60,45,20,0) 7%),linear-gradient(180deg,#F8F1DB,#EEE3C2);
+  color:#2B2A26;border-radius:5px 14px 14px 5px;box-shadow:0 10px 26px rgba(0,0,0,.18);
+  padding:9% 9% 11% 12%;display:flex;flex-direction:column;justify-content:center;box-sizing:border-box}
+.leaf.chorus::after{content:"";position:absolute;inset:3.5% 4% 3.5% 7%;border:calc(var(--u)*.7px) double #2F5D46;border-radius:4px 8px 8px 4px}
+.cover,.back{align-items:center;text-align:center}
+.tag{font-style:italic;font-size:calc(var(--u)*3.3px);color:#6B6554;margin:0 0 .6em}
+.chorus .tag{color:#2F5D46;font-weight:600}
+.line{margin:.3em 0;font-size:calc(var(--u)*5px);line-height:1.45;opacity:.28}
+h1{font-size:calc(var(--u)*10px);line-height:1.1;margin:0 0 .4em;color:#2F5D46}
+.sub{margin:0;font-size:calc(var(--u)*4.4px)}
+.by{margin:.5em 0 0;font-size:calc(var(--u)*3.6px);color:#6B6554;font-style:italic}
+.orn{width:calc(var(--u)*14px);height:calc(var(--u)*1px);border-radius:3px;background:#A63446;margin:1.2em auto}
+.pn{position:absolute;bottom:4.5%;left:0;right:0;text-align:center;font-size:calc(var(--u)*3px);color:#6B6554}
+</style>
+</head>
+<body>
+<div id="stage"></div>
+<script>
+const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+const ease = x => x < .5 ? 4*x*x*x : 1 - Math.pow(-2*x + 2, 3) / 2;
+const fix = s => s.replace(/'/g, "\u2019");
+const esc = s => s.replace(/&/g, "&amp;").replace(/</g, "&lt;");
+const TURN = 0.7, LEAD = 0.25;
+let S = null;
+
+window.setup = async cfg => {
+  const { song, turns, W, H, look, channel, total } = cfg;
+  document.body.style.width = W + "px";
+  document.body.style.height = H + "px";
+  const portrait = H > W;
+  const bookW = portrait ? W * 0.88 : H * 0.84 * 0.75;
+  const bookH = bookW / 0.75;
+  const stage = document.getElementById("stage");
+  stage.className = look === "classic" ? "classic" : "";
+  Object.assign(stage.style, { left: (W - bookW) / 2 + "px", top: (H - bookH) / 2 + "px", width: bookW + "px", height: bookH + "px" });
+  stage.style.setProperty("--u", bookW / 100);
+
+  const pages = [{ type: "cover" }];
+  song.lyrics.forEach(l => {
+    if (l.startsWith("[")) pages.push({ type: "lyric", tag: l.slice(1, -1), lines: [] });
+    else if (l !== "") pages[pages.length - 1].lines.push(fix(l));
+  });
+  pages.push({ type: "back" });
+  const N = pages.length;
+  if (turns.length !== N - 1) throw new Error("Need " + (N - 1) + " turn times, got " + turns.length);
+  const src = song.source || {};
+  const leaves = pages.map((p, i) => {
+    const el = document.createElement("div");
+    el.className = "leaf" + (p.type !== "lyric" ? " " + p.type : "") + (p.tag === "Chorus" ? " chorus" : "");
+    el.style.zIndex = N - i;
+    if (p.type === "cover") el.innerHTML = "<h1>" + esc(fix(song.title)) + "</h1><p class='sub'>A song from the tale of " + esc(fix(src.work || "")) + "</p><div class='orn'></div><p class='by'>" + esc(fix(src.author || "")) + "</p>";
+    else if (p.type === "back") el.innerHTML = "<h1>The end</h1><div class='orn'></div><p class='sub'>" + esc(fix(channel)) + "</p>";
+    else el.innerHTML = "<p class='tag'>" + esc(p.tag) + "</p>" + p.lines.map(t => "<div class='line'>" + esc(t) + "</div>").join("") + "<div class='pn'>" + i + "</div>";
+    stage.appendChild(el);
+    return el;
+  });
+  S = { pages, leaves, N, start: [0, ...turns], total };
+  await Promise.race([document.fonts.ready, new Promise(r => setTimeout(r, 4000))]);
+  return N;
+};
+
+window.renderAt = t => {
+  const { pages, leaves, N, start, total } = S;
+  let cur = 0;
+  for (let i = 0; i < N; i++) if (t >= start[i]) cur = i;
+  leaves.forEach((el, j) => {
+    if (j >= N - 1) { el.style.transform = "none"; return; }
+    const p = clamp((t - (start[j + 1] - LEAD)) / TURN, 0, 1), e = ease(p);
+    el.style.transform = "rotateY(" + (-180 * e) + "deg)";
+    el.style.filter = "brightness(" + (1 - 0.18 * Math.sin(Math.PI * e)) + ")";
+  });
+  pages.forEach((p, i) => {
+    if (p.type !== "lyric") return;
+    const lines = leaves[i].querySelectorAll(".line");
+    const end = i + 1 < N ? start[i + 1] : total;
+    const span = Math.max(0.5, end - start[i] - 1.2) / lines.length;
+    lines.forEach((l, k) => {
+      const ls = start[i] + 0.4 + k * span;
+      const on = i < cur ? 1 : i > cur ? 0 : clamp((t - ls) / 0.35, 0, 1);
+      l.style.opacity = 0.28 + 0.72 * on;
+      l.style.color = (i === cur && t >= ls && t < ls + span) ? "#A63446" : "";
+    });
+  });
+};
+</script>
+</body>
+</html>
