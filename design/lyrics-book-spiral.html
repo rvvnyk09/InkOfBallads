@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lyrics Book</title>
+<style>
+:root{
+  --bw:min(94vw, 960px, calc((100vh - 190px)/.68));
+  --bg:#2b2622; --cover:#5a3a26; --cover-hi:#7a5336; --paper:#f6eedb; --paper-dark:#e4d6b4; --ink:#2f2619; --muted:#7a6a50; --stamp:#9a7b45;
+  --head:Georgia,'Palatino Linotype',Palatino,serif; --body:Georgia,'Palatino Linotype',Palatino,serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:radial-gradient(ellipse at 50% 35%,color-mix(in srgb,var(--bg) 82%,#fff) 0%,var(--bg) 70%);color:var(--ink);font-family:var(--body);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;gap:2.4em;font-size:calc(var(--bw)/52);overflow:hidden;user-select:none;-webkit-user-select:none}
+.scene{perspective:2600px;padding:2em}
+.book{position:relative;width:var(--bw);height:calc(var(--bw)*.68)}
+/* hard cover with leather grain */
+.cover{position:absolute;inset:-1em -1.2em -1.3em;border-radius:.7em;
+  background:
+   url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' seed='4'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 .55 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"),
+   linear-gradient(135deg,var(--cover-hi),var(--cover) 60%);
+  box-shadow:0 2.6em 3em -.6em rgba(0,0,0,.55),0 .5em 1em rgba(0,0,0,.4),inset 0 0 0 .12em rgba(255,255,255,.08),inset 0 0 2em rgba(0,0,0,.4)}
+.cover::after{content:'';position:absolute;inset:.55em;border:.1em solid color-mix(in srgb,var(--stamp) 55%,transparent);border-radius:.4em;pointer-events:none}
+/* page-block thickness (grows/shrinks as you read) */
+.edge{position:absolute;top:.3em;bottom:.3em;background:repeating-linear-gradient(90deg,var(--paper) 0 .09em,var(--paper-dark) .09em .17em);transition:width .9s ease,left .9s ease,right .9s ease;border-radius:.2em}
+.edge.l{right:50%;margin-right:calc(50% - .1em);}
+.edge.r{left:50%;margin-left:calc(50% - .1em);}
+.half{position:absolute;top:0;width:50%;height:100%}
+.half.L{left:0}.half.R{left:50%}
+.leaf{position:absolute;left:50%;top:0;width:50%;height:100%;transform-origin:left center;transform-style:preserve-3d;
+  transition:transform 1.25s cubic-bezier(.55,.06,.25,1);will-change:transform}
+.leaf.flipped{transform:rotateY(-180deg)}
+.face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;overflow:hidden}
+.face.back{transform:rotateY(180deg)}
+/* paper */
+.pg{position:relative;width:100%;height:100%;padding:3.3em 3.2em 3em;display:flex;flex-direction:column;align-items:center;text-align:center;
+  background:
+   url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='300' height='300'><filter id='p'><feTurbulence type='fractalNoise' baseFrequency='.04 .5' numOctaves='4' seed='9'/><feColorMatrix values='0 0 0 0 .45  0 0 0 0 .36  0 0 0 0 .2  0 0 0 .22 0'/></filter><rect width='100%' height='100%' filter='url(%23p)'/></svg>"),
+   radial-gradient(ellipse at 50% 40%,transparent 55%,color-mix(in srgb,var(--paper-dark) 70%,transparent) 130%),
+   var(--paper)}
+/* curve toward the spine, like a real bound page */
+.pg::before{content:'';position:absolute;top:0;bottom:0;width:26%;pointer-events:none;z-index:3}
+.pg.r::before{left:0;background:linear-gradient(90deg,rgba(40,25,5,.42),rgba(40,25,5,.12) 30%,transparent)}
+.pg.l::before{right:0;background:linear-gradient(270deg,rgba(40,25,5,.42),rgba(40,25,5,.12) 30%,transparent)}
+.pg.r{border-radius:0 .35em .35em 0}.pg.l{border-radius:.35em 0 0 .35em}
+/* lift shading while a page is turning */
+.shade{position:absolute;inset:0;pointer-events:none;z-index:6;opacity:0}
+.front .shade{background:linear-gradient(90deg,rgba(0,0,0,.05),rgba(0,0,0,.55))}
+.back  .shade{background:linear-gradient(270deg,rgba(0,0,0,.05),rgba(0,0,0,.55))}
+.leaf .front .shade{opacity:0;transition:opacity .65s ease-out .55s}
+.leaf .back  .shade{opacity:.9;transition:opacity .65s ease-in}
+.leaf.flipped .front .shade{opacity:.9;transition:opacity .65s ease-in}
+.leaf.flipped .back  .shade{opacity:0;transition:opacity .65s ease-out .55s}
+.label{font-family:var(--head);font-size:.95em;letter-spacing:.28em;text-transform:uppercase;color:var(--stamp);margin-bottom:1.1em;position:relative;z-index:1;min-height:1.2em}
+.lines{display:flex;flex-direction:column;gap:.5em;font-size:1.3em;line-height:1.4;margin:auto 0;position:relative;z-index:1}
+.num{position:absolute;bottom:1.4em;font-size:.95em;color:var(--muted);font-style:italic;z-index:1}
+.pg.r .num{right:2.6em}.pg.l .num{left:2.6em}
+.pg.title{justify-content:center}
+.pg.title h1{font-family:var(--head);font-weight:400;font-size:3em;line-height:1.08;margin:.15em 0 .3em;position:relative;z-index:1}
+.pg.title .sub{font-style:italic;color:var(--muted);font-size:1.2em;z-index:1}
+.rule{width:5em;height:1px;background:var(--stamp);margin:1.1em auto;opacity:.7;position:relative;z-index:1}
+.spine{position:absolute;left:50%;top:0;bottom:0;width:0;box-shadow:0 0 .9em .55em rgba(40,25,5,.35);z-index:900;pointer-events:none}
+.ctrl{display:flex;gap:1em;align-items:center;font-size:1.05em;color:#d9ccb2;font-family:var(--body)}
+.ctrl button{font:inherit;padding:.45em 1.2em;border-radius:2em;border:1px solid #ffffff30;background:#ffffff12;color:inherit;cursor:pointer}
+.ctrl button:hover:not(:disabled){background:#ffffff24}
+.ctrl button:disabled{opacity:.35;cursor:default}
+.ctrl .ind{min-width:8em;text-align:center;opacity:.75}
+body.nocontrols .ctrl{display:none}
+/* ---- spiral binding ---- */
+.spiral{position:absolute;left:50%;top:1.6em;bottom:1.6em;width:0;z-index:950;display:none;flex-direction:column;justify-content:space-between;pointer-events:none}
+body.has-spiral .spiral{display:flex}
+body.has-spiral .spine{box-shadow:0 0 .5em .25em rgba(40,25,5,.22)}
+body.has-spiral .pg::before{width:10%;opacity:.5}
+.coil{position:relative;height:.6em}
+.coil .hole{position:absolute;top:50%;width:.36em;height:.36em;margin-top:-.18em;border-radius:50%;
+  background:radial-gradient(circle at 50% 35%,#0006,#000d 70%);box-shadow:inset 0 .08em .15em #000,0 0 0 .08em rgba(0,0,0,.18)}
+.coil .hole.l{left:-1.3em}.coil .hole.r{left:.94em}
+.coil .wire{position:absolute;left:-1.5em;width:3em;top:50%;height:.36em;margin-top:-.18em;border-radius:1em;transform:rotate(-9deg);
+  background:linear-gradient(180deg,var(--wire-hi,#fafafa) 0%,var(--wire-mid,#b4b4b4) 45%,var(--wire-lo,#6d6d6d) 70%,var(--wire-hi,#e8e8e8) 100%);
+  box-shadow:0 .12em .18em rgba(0,0,0,.5),0 0 .04em rgba(0,0,0,.6)}
+.coil .wire::after{content:'';position:absolute;left:30%;right:30%;top:0;bottom:0;border-radius:1em;background:linear-gradient(180deg,rgba(255,255,255,.7),transparent 60%)}
+</style>
+</head>
+<body>
+<div class="scene">
+  <div class="book" id="book">
+    <div class="cover"></div>
+    <div class="edge l" id="edgeL"></div>
+    <div class="edge r" id="edgeR"></div>
+    <div class="half L" id="leftBase"></div>
+    <div class="half R" id="rightBase"></div>
+    <div id="leaves"></div>
+    <div class="spine"></div>
+    <div class="spiral" id="spiral"></div>
+  </div>
+</div>
+<div class="ctrl">
+  <button id="prev">&#8249; Prev</button><span class="ind" id="ind"></span><button id="next">Next &#8250;</button>
+</div>
+
+<script>
+/* =========================================================
+   CONFIG - edit here, or drive it from your app (see API)
+   ========================================================= */
+const CONFIG = {
+  title: "Song Title",
+  subtitle: "Artist or Subtitle",
+  theme: "classic",        // classic | modern | storybook | midnight
+  binding: "spiral",       // spiral | classic (stitched spine)
+  coils: 28,               // number of spiral rings
+  maxLinesPerPage: 8,      // long sections split across pages automatically
+  endText: "— The End —"
+};
+
+/* Paste lyrics as plain text: sections separated by a blank line.
+   A first line like "Verse 1", "Chorus:" or "[Bridge]" becomes the page label. */
+const LYRICS_TEXT = `Verse 1
+Write your first line here,
+and the second one right below,
+a third to carry the tune,
+a fourth to let it flow.
+
+Chorus
+This is where the chorus goes,
+the part that everyone knows,
+turn the page and sing along,
+let the story tell the song.
+
+Verse 2
+Another verse begins to play,
+the words just turn a page,
+line by line, a melody
+unfolds upon the stage.
+
+Bridge
+A quiet moment, soft and slow,
+before the final part,
+a whisper, then a rising chord,
+the music in the heart.
+
+Chorus
+This is where the chorus goes,
+the part that everyone knows,
+turn the page and sing along,
+let the story tell the song.
+
+Outro
+And when the last line fades away,
+the book will gently close,
+but the song will stay.`;
+
+const THEMES = {
+  classic:  {wire:["#fff1c4","#c9a45a","#7a5c25"], bg:"#2b2622", cover:"#5a3a26", coverHi:"#7a5336", paper:"#f6eedb", paperDark:"#e4d6b4", ink:"#2f2619", muted:"#7a6a50", stamp:"#9a7b45"},
+  modern:   {bg:"#e7e9ec", cover:"#2c3440", coverHi:"#434d5c", paper:"#fcfcfb", paperDark:"#e6e6e2", ink:"#1f242b", muted:"#7b828c", stamp:"#8c96a3", dark:false},
+  storybook:{bg:"#3b4a3a", cover:"#2f5d50", coverHi:"#47806f", paper:"#fbf3e1", paperDark:"#ead9b2", ink:"#2e3a2c", muted:"#7c7456", stamp:"#b0873d"},
+  midnight: {wire:["#fff1c4","#c9a45a","#7a5c25"], bg:"#0e1420", cover:"#18233a", coverHi:"#2a3a5c", paper:"#e9e4d6", paperDark:"#cfc6ad", ink:"#1d2233", muted:"#6f7183", stamp:"#a38c52"}
+};
+
+/* =========================================================
+   Engine
+   ========================================================= */
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+const leavesEl = $('leaves');
+let leaves = [], cur = 0, busy = false, lyrics = [];
+
+function applyTheme(name){
+  const t = THEMES[name] || THEMES.classic, r = document.documentElement.style;
+  r.setProperty('--bg',t.bg); r.setProperty('--cover',t.cover); r.setProperty('--cover-hi',t.coverHi);
+  r.setProperty('--paper',t.paper); r.setProperty('--paper-dark',t.paperDark);
+  r.setProperty('--ink',t.ink); r.setProperty('--muted',t.muted); r.setProperty('--stamp',t.stamp);
+  const w = t.wire || ["#fafafa","#b4b4b4","#6d6d6d"];
+  r.setProperty('--wire-hi',w[0]); r.setProperty('--wire-mid',w[1]); r.setProperty('--wire-lo',w[2]);
+  document.querySelector('.ctrl').style.color = (name==='modern') ? '#46505e' : '#d9ccb2';
+}
+
+/* plain text -> [{label, lines}] with automatic pagination */
+function parseLyrics(text){
+  const out = [];
+  text.replace(/\r/g,'').trim().split(/\n\s*\n/).forEach(block=>{
+    let lines = block.split('\n').map(s=>s.trim()).filter(Boolean), label = '';
+    if(lines.length && (/^\[.+\]$/.test(lines[0]) || /^[^,.!?;]{1,28}:$/.test(lines[0]) || /^(verse|chorus|bridge|intro|outro|pre-?chorus|hook|refrain)\b.{0,12}$/i.test(lines[0]))){
+      label = lines.shift().replace(/^\[|\]$/g,'').replace(/:$/,'');
+    }
+    const max = CONFIG.maxLinesPerPage;
+    for(let i=0;i<Math.max(lines.length,1);i+=max) out.push({label: i===0?label:'', lines: lines.slice(i,i+max)});
+  });
+  return out;
+}
+
+const labelHTML = p => `<div class="label">${esc(p.label||'')}</div>`;
+const lyricPage = (p,side,n) => `<div class="pg ${side}">${labelHTML(p)}<div class="lines">${p.lines.map(l=>`<div>${esc(l)}</div>`).join('')}</div><span class="num">${n}</span></div>`;
+const titlePage = side => `<div class="pg ${side} title"><h1>${esc(CONFIG.title)}</h1><div class="rule"></div><div class="sub">${esc(CONFIG.subtitle)}</div></div>`;
+const endPage = side => `<div class="pg ${side} title"><div class="sub">${esc(CONFIG.endText)}</div></div>`;
+const blankPage = (side,n) => `<div class="pg ${side}"><span class="num">${n}</span></div>`;
+
+function buildBinding(){
+  document.body.classList.toggle('has-spiral', CONFIG.binding==='spiral');
+  $('spiral').innerHTML = Array.from({length:CONFIG.coils},()=>'<div class="coil"><b class="hole l"></b><b class="hole r"></b><i class="wire"></i></div>').join('');
+}
+function build(){
+  buildBinding();
+  leavesEl.innerHTML=''; leaves=[]; cur=0; busy=false;
+  const pages = lyrics.slice();
+  if(pages.length % 2) pages.push(null);           // pad so every leaf has two sides
+  const n = pages.length/2;
+  $('leftBase').innerHTML = titlePage('l');
+  $('rightBase').innerHTML = endPage('r');
+  for(let i=0;i<n;i++){
+    const a = pages[2*i], b = pages[2*i+1];
+    const d = document.createElement('div'); d.className='leaf'; d.style.zIndex = n-i;
+    d.innerHTML =
+      `<div class="face front">${a?lyricPage(a,'r',2*i+1):blankPage('r',2*i+1)}<div class="shade"></div></div>` +
+      `<div class="face back">${b?lyricPage(b,'l',2*i+2):blankPage('l',2*i+2)}<div class="shade"></div></div>`;
+    leavesEl.appendChild(d); leaves.push(d);
+  }
+  update();
+}
+
+function update(){
+  const n = leaves.length, k = 1.1;                  // page-block thickness in em
+  $('edgeL').style.width = (.25 + k*cur/Math.max(n,1) + .6)+'em';
+  $('edgeR').style.width = (.25 + k*(n-cur)/Math.max(n,1) + .6)+'em';
+  $('prev').disabled = cur===0; $('next').disabled = cur===n;
+  $('ind').textContent = cur===0 ? 'Title' : cur===n ? 'End' : `Pages ${2*cur} – ${2*cur+1}`;
+}
+
+function next(fast){
+  if(busy || cur>=leaves.length) return false; busy=true;
+  const i=cur, d=leaves[i]; cur++;
+  if(fast) d.style.transitionDuration='.45s';
+  d.classList.add('flipped');
+  setTimeout(()=>d.style.zIndex=i+1, fast?200:600);
+  setTimeout(()=>{busy=false; d.style.transitionDuration='';}, fast?450:1250);
+  update(); return true;
+}
+function prev(fast){
+  if(busy || cur<=0) return false; busy=true; cur--;
+  const i=cur, d=leaves[i], n=leaves.length;
+  if(fast) d.style.transitionDuration='.45s';
+  d.classList.remove('flipped');
+  setTimeout(()=>d.style.zIndex=n-i, fast?200:600);
+  setTimeout(()=>{busy=false; d.style.transitionDuration='';}, fast?450:1250);
+  update(); return true;
+}
+/* jump to a spread (0 = title, 1 = first lyrics spread, ...) */
+function goTo(target){
+  target = Math.max(0, Math.min(leaves.length, target));
+  const step = () => {
+    if(cur===target) return;
+    const moved = cur<target ? next(true) : prev(true);
+    setTimeout(step, moved ? 300 : 80);
+  };
+  step();
+}
+
+$('next').onclick = () => next();
+$('prev').onclick = () => prev();
+document.addEventListener('keydown', e=>{
+  if(e.key==='ArrowRight'||e.key==='PageDown'||e.key===' '){e.preventDefault();next()}
+  if(e.key==='ArrowLeft'||e.key==='PageUp'){prev()}
+});
+/* click a side, or swipe */
+(function(){
+  const bk = $('book'); let x0=null, moved=false;
+  bk.addEventListener('pointerdown', e=>{x0=e.clientX; moved=false});
+  bk.addEventListener('pointermove', e=>{ if(x0!==null && Math.abs(e.clientX-x0)>40 && !moved){ moved=true; (e.clientX<x0)?next():prev(); } });
+  bk.addEventListener('pointerup', e=>{
+    if(!moved && x0!==null){ const r=bk.getBoundingClientRect(); (e.clientX-r.left>r.width/2)?next():prev(); }
+    x0=null;
+  });
+})();
+
+/* =========================================================
+   Public API
+   book.setLyrics([{label, lines:[]}, ...])
+   book.setLyricsText("Verse 1\nline\nline\n\nChorus\n...")
+   book.setInfo({title, subtitle, theme})
+   book.next() / book.prev() / book.goTo(spreadIndex)
+   Also: window.postMessage({type:'book', lyricsText, title, subtitle, theme, goTo})
+   URL params: ?theme=modern&binding=classic&title=...&subtitle=...&controls=0
+   ========================================================= */
+window.book = {
+  next, prev, goTo,
+  setLyrics(arr){ lyrics = arr; build(); },
+  setLyricsText(t){ lyrics = parseLyrics(t); build(); },
+  setInfo(o){ Object.assign(CONFIG, o||{}); applyTheme(CONFIG.theme); build(); },
+  get spread(){ return cur; }, get spreads(){ return leaves.length; }
+};
+window.addEventListener('message', e=>{
+  const m = e.data; if(!m || m.type!=='book') return;
+  if(m.title||m.subtitle||m.theme) book.setInfo({title:m.title??CONFIG.title, subtitle:m.subtitle??CONFIG.subtitle, theme:m.theme??CONFIG.theme});
+  if(m.lyricsText) book.setLyricsText(m.lyricsText);
+  if(Array.isArray(m.lyrics)) book.setLyrics(m.lyrics);
+  if(typeof m.goTo==='number') goTo(m.goTo);
+});
+
+const q = new URLSearchParams(location.search);
+['title','subtitle','theme','binding'].forEach(k=>{ if(q.get(k)) CONFIG[k]=q.get(k); });
+if(q.get('controls')==='0') document.body.classList.add('nocontrols');
+applyTheme(CONFIG.theme);
+lyrics = parseLyrics(LYRICS_TEXT);
+build();
+</script>
+</body>
+</html>
