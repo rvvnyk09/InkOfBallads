@@ -87,6 +87,23 @@ ffmpeg -y -ss 8.3 -i song-9x16.mp4 -t 36.2 -c:v libx264 -crf 20 -pix_fmt yuv420p
 - End after the chorus's last sung word and before the next page's turn starts (0.25 s before its timestamp), so the Short does not cut off a word or show a page turning at the end.
 - This cut has no fades. Add `-vf "fade=..."` and `-af "afade=..."` if you want them.
 
+## Upload text (`upload-text`)
+
+```
+b2s-video upload-text --song song.json
+```
+
+This writes the song JSON's `youtube` block (the video-upload-metadata skill adds it to a version) as plain text, with no JSON quotes, brackets or escapes, so each part can be pasted straight into YouTube Studio. It invents nothing: it only lays out what the JSON holds.
+
+- The file goes to `out/<folder>-youtube.txt` inside the song's folder, beside the videos; `--out FILE` writes it somewhere else.
+- It has a section for the regular video and one for the Short, each with the title (or title options), description, tags (comma-separated for the Tags box), thumbnail text, pinned comment and Studio settings, with character counts against YouTube's limits (title 100, description 5000, tags 500).
+- Fields given once at the top of the `youtube` block are used by both parts. The skill's flat layout (`titles`, `shorts_title`, `shorts_description`), as in a standalone `<folder>.metadata.json`, works too.
+- It prints any `{PLACEHOLDER}` still in the text (such as `{FULL_VIDEO_URL}`), to fill in after uploading.
+- If you filled a placeholder in by hand in the text file (pasting the real link over `{FULL_VIDEO_URL}`), making the file again keeps what you pasted and says so. Put the link in the song JSON too, so it stays there for good.
+- With several versions, it uses the one with a `youtube` block; `--version` picks one by number, channel or title.
+- It replaces a file it wrote before, but not any other file at that path unless you pass `--force`.
+- The JSON stays the source: change the text there, then run the command again.
+
 ## Timestamps
 
 You need one timestamp for every page except the first, so **the count is the number of pages minus 1**. With a cover, 8 sections and a back cover there are 10 pages, so 9 timestamps. `--no-cover` and `--no-back-cover` change the count, so use the same flags for `init-timing`, `contact-sheet` and `render`.
@@ -253,7 +270,7 @@ pip install -r requirements-dev.txt
 python -m pytest
 ```
 
-- **Unit tests:** lyrics parsing (empty sections, missing source, unknown tags), every timestamp format and bad input, the page-count check and its message, and line timing.
+- **Unit tests:** lyrics parsing (empty sections, missing source, unknown tags), every timestamp format and bad input, the page-count check and its message, line timing, and the upload text (both youtube layouts, version choice, placeholders, not replacing other files).
 - **Different songs:** three songs in `tests/data` (with Intro and Instrumental pages, an 8-line verse, a very long line, an unbreakable word, no source, an unknown tag) prove nothing is tied to one song.
 - **Browser tests:** for the notebook and storybook looks, they check that every page fits in both formats and that frames are deterministic. They also check that tags are never shown, the logo appears on the cover, every lyric page, The End page and the tabs, and the browser preview loads with its audio.
 - **ffmpeg smoke test:** it renders 5 s at 6 fps and checks with ffprobe for H.264, AAC and the right duration.
@@ -262,7 +279,7 @@ python -m pytest
 ## Files
 
 ```
-b2s_video/          the package (cli, song, timing, render, contact, preview, suggest, notebook.html, template.html)
+b2s_video/          the package (cli, song, timing, render, contact, preview, suggest, upload, notebook.html, template.html)
 b2s_video/assets/fonts/   Caveat, Fredoka and Lora (SIL Open Font License, licences included)
 tests/              pytest suite and test songs
 reference/          the original prototype, kept for comparison

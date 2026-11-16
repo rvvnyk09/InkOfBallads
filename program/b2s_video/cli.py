@@ -13,7 +13,7 @@ from .song import LOOKS, SongError, build_pages, default_look, load_song, song_t
 from .timing import TimingError, format_timestamp, line_times, load_turns_file, parse_inline, timing_template, \
     validate_turns
 
-COMMANDS = ("render", "init-timing", "contact-sheet", "preview", "suggest-timing")
+COMMANDS = ("render", "init-timing", "contact-sheet", "preview", "suggest-timing", "upload-text")
 
 
 def _err(msg: str) -> None:
@@ -110,6 +110,13 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--language", default="en")
     s.add_argument("--force", action="store_true", help="overwrite the file if it exists")
     _add_pages(s)
+
+    u = sub.add_parser("upload-text", help="the song JSON's youtube block as a plain text file to copy and paste")
+    u.add_argument("--song", required=True, help="b2s song JSON file with a \"youtube\" block")
+    u.add_argument("--version", help="for a song file with several versions: its number, channel or title "
+                                     "(default: the one version that has a youtube block)")
+    u.add_argument("--out", help="text file to write (default: <song folder>/out/<folder>-youtube.txt)")
+    u.add_argument("--force", action="store_true", help="replace an existing file that upload-text did not write")
     return ap
 
 
@@ -277,8 +284,32 @@ def cmd_suggest_timing(args) -> int:
     return 0
 
 
+def cmd_upload_text(args) -> int:
+    from .upload import default_out, keep_filled, pick_version, placeholders, read_json, upload_text, written_by_us
+    song_path = Path(args.song)
+    version = pick_version(read_json(song_path), args.version)
+    out = Path(args.out) if args.out else default_out(song_path)
+    text = upload_text(version, song_path.name, song_path.resolve().parent.name)
+    kept = []
+    if out.exists():
+        if written_by_us(out):
+            text, kept = keep_filled(out.read_text(encoding="utf-8", errors="replace"), text)
+        elif not args.force:
+            raise SongError(f"{out} exists and was not written by upload-text. Use --force to replace it.")
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(text, encoding="utf-8")
+    print(f"Wrote {out}")
+    if kept:
+        print("Kept what you filled in by hand for: " + ", ".join(sorted(set(kept)))
+              + " (put it in the song JSON too, so it is there for good)")
+    left = placeholders(text)
+    if left:
+        print("Placeholders still to fill in: " + ", ".join(left))
+    return 0
+
+
 HANDLERS = {"render": cmd_render, "init-timing": cmd_init_timing, "contact-sheet": cmd_contact_sheet,
-            "preview": cmd_preview, "suggest-timing": cmd_suggest_timing}
+            "preview": cmd_preview, "suggest-timing": cmd_suggest_timing, "upload-text": cmd_upload_text}
 
 
 def main(argv: list[str] | None = None) -> int:

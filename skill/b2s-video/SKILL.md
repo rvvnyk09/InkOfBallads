@@ -18,7 +18,6 @@ The user writes songs with the b2s skill, generates the music elsewhere, and kee
 | Cover logo (gold line art, transparent) | `C:\RV\Laptop Backup - 07.09.2022\Work\Book\InkOfBallads_lineart.png` |
 | Tab mark (quill only, transparent) | `C:\RV\Laptop Backup - 07.09.2022\Work\Book\InkOfBallads_quill.png` |
 | Timing checker | `scripts/check_timings.py` in this skill |
-| Upload text writer | `scripts/write_upload_text.py` in this skill (standard library only) |
 
 If a path does not exist, look for it nearby before asking; the user may have moved the folder. Use the Bash tool with forward slashes and quote every path, since they contain spaces. The program's README has the full option list; read it when the user asks for something this file does not cover.
 
@@ -126,10 +125,10 @@ Make it in 9:16 (the user's preview format). One HTML file that plays the song i
 When the song JSON has a `youtube` block (the video-upload-metadata skill adds it to the version), write it out as plain text, with no JSON quotes, brackets or escapes, so the user can paste each part straight into YouTube Studio:
 
 ```
-"<program>/.venv/Scripts/python.exe" "<skill>/scripts/write_upload_text.py" --song "<json>" --out "<folder>/out/<folder>-youtube.txt"
+"<program>/.venv/Scripts/b2s-video.exe" upload-text --song "<json>" --out "<folder>/out/<folder>-youtube.txt"
 ```
 
-The file has a section for the regular video and one for the Short, each with the title, description, tags (comma-separated for the Tags box), thumbnail text, pinned comment and Studio settings, and character counts against YouTube's limits. It also reads the older layout (description and tags shared at the top of the block) and the upload skill's standalone `<folder>.metadata.json`. It prints any `{PLACEHOLDER}` still in the text (such as `{FULL_VIDEO_URL}`); tell the user to fill those in after uploading. It replaces a file it wrote before, but refuses any other file at that path without `--force`.
+This is the program's `upload-text` command (`--out` defaults to that same path; `--version` picks a version when several have a `youtube` block). The file has a section for the regular video and one for the Short, each with the title, description, tags (comma-separated for the Tags box), thumbnail text, pinned comment and Studio settings, and character counts against YouTube's limits. It also reads the older layout (description and tags shared at the top of the block) and the upload skill's standalone `<folder>.metadata.json`. It prints any `{PLACEHOLDER}` still in the text (such as `{FULL_VIDEO_URL}`); tell the user to fill those in after uploading (best in the JSON). Links the user pasted by hand over a placeholder in an earlier `.txt` are kept when it is made again, and it says so. It replaces a file it wrote before, but refuses any other file at that path without `--force`.
 
 Run it again **whenever the `youtube` block changes** (a new description, more tags, a new title), including when the video-upload-metadata skill updated the JSON in a turn without any video work. The JSON stays the source: change the text there, never only in the `.txt`. If the JSON has no `youtube` block, skip this step and mention that the video-upload-metadata skill can write one.
 
