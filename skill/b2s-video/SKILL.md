@@ -1,6 +1,6 @@
 ---
 name: b2s-video
-description: Make the InkOfBallads "Singing Notebook" lyric videos from a b2s song folder (a b2s song JSON plus its MP3) with the local b2s-video program - checked page-turn timings, the full 9:16 video with the InkOfBallads logos and a 16:9 version that frames the 9:16 notebook for regular YouTube, a Short cut from the 9:16, thumbnails from the cover (9:16 opening slide and 16:9), a browser preview, and a plain-text copy of the song JSON's YouTube upload text (`<folder>-youtube.txt`) ready to paste. Use this skill whenever the user asks to create, make, render or redo a video, lyric video, Short, Reel, TikTok, thumbnail or preview for a song or song folder (for example "create video for ...\CreateVideo\some-song"), wants page timings checked or fixed, wants the upload text as a plain text file, or asks how to run b2s-video, even if they do not name the program. Not for writing lyrics (that is the b2s skill) or for writing upload titles and descriptions (video-upload-metadata writes them into the JSON; this skill only lays them out as text).
+description: Make the InkOfBallads "Singing Notebook" lyric videos from a b2s song folder (a b2s song JSON plus its MP3) with the local b2s-video program - checked page-turn timings, the full 9:16 video with the InkOfBallads logos and a 16:9 version that frames the 9:16 notebook for regular YouTube, a Short cut from the 9:16, thumbnails from the cover (9:16 opening slide and 16:9), a browser preview, and the YouTube upload text (`<folder>-youtube.txt`, ready to paste), writing the song JSON's `youtube` block first when it is missing. Use this skill whenever the user asks to create, make, render or redo a video, lyric video, Short, Reel, TikTok, thumbnail or preview for a song or song folder (for example "create video for ...\CreateVideo\some-song"), wants page timings checked or fixed, wants the upload text or YouTube details for a song folder, or asks how to run b2s-video, even if they do not name the program. Not for writing lyrics (that is the b2s skill), or for upload metadata for videos that are not b2s song folders (video-upload-metadata).
 ---
 
 # b2s-video: Singing Notebook lyric videos
@@ -31,7 +31,7 @@ If a path does not exist, look for it nearby before asking; the user may have mo
 - **Logos on**: `--logo` (cover, faint page watermark, The End page) and `--logo-mark` (quill on the page tabs).
 - **No `--channel`**: the user removed "Book to Song" text. With a logo, the cover shows the logo instead.
 - **Short**: verse 1 and the first chorus, cut from the full video, no fades at either end, under 60 s.
-- Outputs go in `<song-folder>\out\`, named after the folder: `<folder>-9x16.mp4`, `<folder>-16x9.mp4`, `<folder>-short-<N>s.mp4` (N = rounded length), `<folder>-thumbnail.jpg` (16:9), `<folder>-thumbnail-9x16.jpg`, `<folder>-preview.html`, `sheet-9x16.png`, and `<folder>-youtube.txt` (the upload text, step 8) once the song JSON has a `youtube` block.
+- Outputs go in `<song-folder>\out\`, named after the folder: `<folder>-9x16.mp4`, `<folder>-16x9.mp4`, `<folder>-short-<N>s.mp4` (N = rounded length), `<folder>-thumbnail.jpg` (16:9), `<folder>-thumbnail-9x16.jpg`, `<folder>-preview.html`, `sheet-9x16.png`, and `<folder>-youtube.txt` (the upload text, step 8; the skill writes the song JSON's `youtube` block first if it is missing).
 
 ## Workflow
 
@@ -120,9 +120,19 @@ Read both JPGs and check that the title, "after ..." line and logo are sharp and
 
 Make it in 9:16 (the user's preview format). One HTML file that plays the song in the template with the audio (Play button, space bar, seek bar). It finds the MP3 by relative path, so it must stay in `out\` beside the song folder.
 
-### 8. Upload text (plain text to copy and paste)
+### 8. YouTube details and upload text (plain text to copy and paste)
 
-When the song JSON has a `youtube` block (the video-upload-metadata skill adds it to the version), write it out as plain text, with no JSON quotes, brackets or escapes, so the user can paste each part straight into YouTube Studio:
+Every video run ends with an upload text file. It comes from the `youtube` block in the song JSON's version, so first make sure that block exists.
+
+**8a. If the version has no `youtube` block, write one.** Follow the video-upload-metadata skill's rules (read its `SKILL.md` and `references/platforms.md`: hard limits, keyword-first titles, the made-for-kids and AI-disclosure checks, no misleading tags), but write it in the house layout below, not that skill's own JSON shape, and add it only to the version the video was made from. Copy the layout, links and tone from the newest song that already has one (`your-eyes-feel-like-home` is the model; look for others with `grep -l '"youtube"' */*.json`):
+
+- `links`: `handle_url` `https://www.youtube.com/@InkOfBallads`, `subscribe_url` `https://www.youtube.com/channel/UChThLWqUGxCJsx-TYefVNlw?sub_confirmation=1`, and `{FULL_VIDEO_URL}`, `{PLAYLIST_URL}`, `{NEXT_VIDEO_URL}`, `{SOURCE_TEXT_URL}` as placeholders.
+- `normal` (the 16:9 upload) and `short` (the Short), each with `title`, `description` (a list of lines: hook first, a short summary, the source credit from the JSON's `source` with "Original song ... AI-assisted music and lyrics", a comment prompt, the channel and subscribe links, then the hashtags line), `tags`, `hashtags`, `pinned_comment` and `studio_settings` (`made_for_kids`, `ai_use_disclosure`, `category` Music, `language`, and `playlist` for `normal`); `normal` also gets `thumbnail_text`. The Short's description links back with `Watch the full song: {FULL_VIDEO_URL}`.
+- Base everything on what the song JSON says (title, `plot_summary`, `source`, lyrics, `channel_reason`, `safety_check`); invent no facts. `made_for_kids` is `no` unless the song is clearly aimed at children (then say what that switches off).
+
+Add the block with a short Python script that loads the JSON, sets `version["youtube"]`, and writes it back with `indent=2, ensure_ascii=False`, changing nothing else. Copy the JSON to `<scratchpad>` first, and afterwards check that only the `youtube` key was added (compare the old and new JSON with the `youtube` key removed). Never replace a `youtube` block that is already there unless the user asks; to improve one, change only what they asked for.
+
+**8b. Write the upload text** with the program, as plain text with no JSON quotes, brackets or escapes, so the user can paste each part straight into YouTube Studio:
 
 ```
 "<program>/.venv/Scripts/b2s-video.exe" upload-text --song "<json>" --out "<folder>/out/<folder>-youtube.txt"
@@ -130,14 +140,14 @@ When the song JSON has a `youtube` block (the video-upload-metadata skill adds i
 
 This is the program's `upload-text` command (`--out` defaults to that same path; `--version` picks a version when several have a `youtube` block). The file has a section for the regular video and one for the Short, each with the title, description, tags (comma-separated for the Tags box), thumbnail text, pinned comment and Studio settings, and character counts against YouTube's limits. It also reads the older layout (description and tags shared at the top of the block) and the upload skill's standalone `<folder>.metadata.json`. It prints any `{PLACEHOLDER}` still in the text (such as `{FULL_VIDEO_URL}`); tell the user to fill those in after uploading (best in the JSON). Links the user pasted by hand over a placeholder in an earlier `.txt` are kept when it is made again, and it says so. It replaces a file it wrote before, but refuses any other file at that path without `--force`.
 
-Run it again **whenever the `youtube` block changes** (a new description, more tags, a new title), including when the video-upload-metadata skill updated the JSON in a turn without any video work. The JSON stays the source: change the text there, never only in the `.txt`. If the JSON has no `youtube` block, skip this step and mention that the video-upload-metadata skill can write one.
+Run it again **whenever the `youtube` block changes** (a new description, more tags, a new title), including when the video-upload-metadata skill updated the JSON in a turn without any video work. The JSON stays the source: change the text there, never only in the `.txt`. If the user only wants the upload text for a song (no video work), do 8a and 8b on their own.
 
 ### 9. Check and report
 
 Grab a few frames to confirm what you made (the cover with the logo, a lyric page with watermark and quill tab, The End page): `ffmpeg -v error -y -i <video> -vf "select='eq(n\,30)+eq(n\,450)',scale=300:-1,tile=2x1" -frames:v 1 <png>` and Read the image. Do the same for the 16:9 file (scale to 480 wide) and check that the notebook sits in the middle on an even background with the logo on the right. Then tell the user, in plain words:
 
 - each file's path (as a clickable link) and length,
-- the upload text file, if written, and any placeholders left in it,
+- the upload text file and any placeholders left in it, and, if you wrote the `youtube` block, its titles and the made-for-kids and AI answers you chose, so the user can change them,
 - that the 16:9 file and the 16:9 thumbnail are for the regular YouTube upload, and the Short (or 9:16) with the 9:16 thumbnail for Shorts, Reels and TikTok,
 - which page times you changed and why ("page 5 turned during 'merry and strong'; moved to 1:00.0"),
 - anything still uncertain (lines Whisper did not hear, tight gaps),
@@ -145,8 +155,8 @@ Grab a few frames to confirm what you made (the cover with the logo, a lyric pag
 
 ## Things to avoid
 
-- Changing lyric wording or the song JSON. The video shows the lyrics exactly as written; if a line looks wrong, tell the user.
-- Uploading or publishing anything. These are local files; uploading is the user's step (the video-upload-metadata skill writes the upload text).
+- Changing lyric wording or the song JSON. The video shows the lyrics exactly as written; if a line looks wrong, tell the user. The one change allowed is adding a missing `youtube` block (step 8a).
+- Uploading or publishing anything. These are local files; uploading is the user's step.
 - Overwriting the user's originals: their MP3, JSON, a hand-made `turns.txt`, or older videos that are not this skill's outputs. Earlier files from this workflow (same names in `out\`) may be replaced.
 - Editing the program itself during a video request. If the template needs a change (layout, new option), say so, show a mock-up still first, and change it only when the user agrees; the program has its own tests (`program/.venv/Scripts/python.exe -m pytest` from `program`).
 
