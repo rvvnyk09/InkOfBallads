@@ -69,3 +69,10 @@ def test_missing_ffmpeg_message(monkeypatch, tmp_path):
 def test_render_is_default_command():
     args = cli.build_parser().parse_args(["render", "--song", "s", "--audio", "a", "--out", "o.mp4"])
     assert args.command == "render" and args.format == "16x9" and args.line_timing == "all" and args.fps == 30
+
+
+@pytest.mark.parametrize("command", ["render", "contact-sheet", "preview"])
+def test_subscribe_is_on_by_default(command):
+    base = [command, "--song", "s", "--audio", "a", "--out", "o"]
+    assert cli.build_parser().parse_args(base).subscribe is True
+    assert cli.build_parser().parse_args(base + ["--no-subscribe"]).subscribe is False

@@ -55,6 +55,9 @@ def _add_look(p):
                                   "background is best (.png .webp .svg .jpg)")
     p.add_argument("--logo-mark", help="small symbol for the purple page tabs, in place of the note "
                                        "(transparent PNG; drawn in white)")
+    p.add_argument("--subscribe", action=argparse.BooleanOptionalAction, default=True,
+                   help="write \"Like & Subscribe\" on The End page, with \"Subscribe\" circled by hand "
+                        "(notebook look; on by default, --no-subscribe leaves it out)")
     p.add_argument("--highlight", action="store_true",
                    help="mark the line being sung (highlighter in the notebook, berry red in the storybook); "
                         "off by default; needs --line-timing even or per-line times")
@@ -157,7 +160,7 @@ def _job(args, song, pages, audio_seconds) -> Job:
     return Job(pages=pages, starts=starts, lines=lines, format=args.format, look=args.look or default_look(song),
                title=song_title(song), work=source_field(song, "work"), author=source_field(song, "author"),
                channel=args.channel, logo=_image(args, "logo"), mark=_image(args, "logo_mark"),
-               highlight=args.highlight, total=audio_seconds)
+               highlight=args.highlight, subscribe=args.subscribe, total=audio_seconds)
 
 
 LOGO_TYPES = {".png": "image/png", ".webp": "image/webp", ".svg": "image/svg+xml", ".jpg": "image/jpeg", ".jpeg": "image/jpeg"}

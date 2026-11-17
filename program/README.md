@@ -69,7 +69,7 @@ After this, `b2s-video --help` works whenever the venv is active.
 b2s-video preview --song song.json --audio song.mp3 --turns-file turns.txt --format 9x16 --out preview.html
 ```
 
-This writes one HTML file that plays the song in its template with the audio: open it in any browser and press **Play** (or the space bar), and drag the bar to jump around. It uses the same template and timings as `render`, so it shows what the video will look like, without waiting for a render. It takes the same options (`--look`, `--format`, `--channel`, `--logo`, `--logo-mark`, `--line-timing`, `--highlight`, `--no-cover`, `--no-back-cover`).
+This writes one HTML file that plays the song in its template with the audio: open it in any browser and press **Play** (or the space bar), and drag the bar to jump around. It uses the same template and timings as `render`, so it shows what the video will look like, without waiting for a render. It takes the same options (`--look`, `--format`, `--channel`, `--logo`, `--logo-mark`, `--no-subscribe`, `--line-timing`, `--highlight`, `--no-cover`, `--no-back-cover`).
 
 - Fonts are embedded, and nothing is loaded from the internet.
 - The audio is not copied into the file. The page finds it by its path relative to the HTML file, so keep the two in the same places (or make the preview again after moving them).
@@ -174,6 +174,7 @@ The tool reads `lyrics` (required) plus `title`, `channel`, `source.work` and `s
 | `--channel "Name"` | none | text on the back cover under "The end" |
 | `--logo FILE` | none | your logo on the notebook cover, as a faint watermark behind the lyrics, and on The End page (see below) |
 | `--logo-mark FILE` | none | a small symbol on the purple page tabs, in place of the ♪ |
+| `--subscribe`, `--no-subscribe` | on | "Like & Subscribe" on The End page, under the logo, with "Subscribe" circled by hand (notebook look); `--no-subscribe` leaves it out |
 | `--fps N` | 30 | |
 | `--workers N` | half your CPU cores, at most 4 | Chromium processes rendering frames in parallel |
 | `--crf N` | 20 | x264 quality; lower is better and bigger |
@@ -193,7 +194,7 @@ Both templates are a pure function of time, `renderAt(t)`, with no CSS transitio
 
 Based on `spiral-flipbook-purple.html`.
 
-- **Pages, in order:** a purple cover with a label ("Singing Notebook", the title, "after {work}", a music note; no author) and at the bottom your `--logo` image, or else your `--channel` name (or "songs & stories"), one ruled page per section, and a last page with "The End", "thanks for listening", `--channel` and your `--logo`.
+- **Pages, in order:** a purple cover with a label ("Singing Notebook", the title, "after {work}", a music note; no author) and at the bottom your `--logo` image, or else your `--channel` name (or "songs & stories"), one ruled page per section, and a last page with "The End", "thanks for listening", `--channel`, your `--logo` and "Like & Subscribe" with "Subscribe" circled (leave it out with `--no-subscribe`).
 - **Page elements:** blue ruling, a red margin, punched holes, a spiral binding, a small music-note doodle and the page number. The lyrics sit on the ruled lines, a little above the middle of the page, in Caveat handwriting in ink `#6a2a62`. Section tags are not shown. Every page but the cover has the purple ♪ tab on the right edge (or your `--logo-mark`).
 - **Page turn:** the page swings around the spiral, starting 0.25 s before each timestamp and lasting 0.7 s. Past halfway you see the ruled back of the page, and it fades out at the end of the swing.
 - **Page shape:** 16:9 uses a landscape notebook page so lyric lines fit on one row at about 45 px. 9:16 uses the portrait notebook page, kept above the bottom 15%, with larger handwriting (about 52 px): long lines wrap onto the next ruled line, split evenly, instead of shrinking.

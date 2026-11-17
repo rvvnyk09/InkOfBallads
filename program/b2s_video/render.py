@@ -79,6 +79,7 @@ class Job:
     logo: str | None = None      # a data: URI: the notebook cover, a page watermark and The End page
     mark: str | None = None      # a data: URI: the symbol on the notebook's page tabs
     highlight: bool = False      # color the line being sung berry red
+    subscribe: bool = False      # "Like & Subscribe" on the notebook's The End page
     total: float = 0.0
 
     @property
@@ -94,7 +95,7 @@ class Job:
             "author": typographic(self.author) if self.author else None,
             "channel": typographic(self.channel) if self.channel else None,
             "logo": self.logo, "mark": self.mark,
-            "highlight": self.highlight,
+            "highlight": self.highlight, "subscribe": self.subscribe,
             "starts": self.starts, "lines": self.lines,
             "pages": [{"kind": p.kind, "tag": typographic(p.tag) if p.tag else None,
                        "lines": [typographic(l) for l in p.lines], "repeated": p.repeated} for p in self.pages],

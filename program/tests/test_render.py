@@ -52,6 +52,17 @@ def test_every_page_fits(name, fmt, look):
 
 
 @needs_browser
+@pytest.mark.parametrize("fmt", ["16x9", "9x16"])
+def test_subscribe_fits_on_the_end_page(fmt):
+    job = make_job("hand-in-hand", fmt, look="notebook")
+    job.subscribe = True
+    assert job.config()["subscribe"] is True
+    info = check_layout(job)
+    assert info.overflow == [], f"pages that overflow: {info.overflow}"
+    assert info.k[-1] == 1, "the End page shrank to make room"
+
+
+@needs_browser
 @pytest.mark.parametrize("look", [None, "notebook"])
 def test_long_pages_shrink(look):
     job = make_job("long-road", look=look)

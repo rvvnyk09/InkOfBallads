@@ -71,6 +71,11 @@ body{background:
 .inked{background:var(--ink);-webkit-mask:var(--src) center/contain no-repeat;mask:var(--src) center/contain no-repeat}
 .watermark{position:absolute;left:94px;right:26px;top:22%;bottom:22%;opacity:.08}
 .end-logo{flex:none;height:calc(190px*var(--k));max-width:80%;margin-top:calc(30px*var(--k));opacity:.85}
+/* --subscribe: "Like & Subscribe" under the logo, "Subscribe" circled by hand. */
+.subscribe{flex:none;font-size:calc(42px*var(--k));font-weight:700;line-height:1.2;margin-top:calc(34px*var(--k));
+  transform:rotate(-1.5deg);white-space:nowrap}
+.subscribe .ring{position:relative;display:inline-block;padding:0 .2em 0 .14em;margin-left:.08em}
+.subscribe .ring svg{position:absolute;left:-.28em;top:-.18em;width:calc(100% + .64em);height:calc(100% + .36em);overflow:visible;opacity:.8}
 .tab .mark{height:26px;margin-top:4px;background:#fff}
 .cover-logo{position:absolute;left:96px;right:44px;bottom:3.5%;height:19%;width:calc(100% - 140px);object-fit:contain}
 .cover-name{position:absolute;left:96px;right:44px;bottom:9%;text-align:center;color:rgba(255,240,250,.75);font-size:26px;
@@ -94,6 +99,17 @@ let WRAP_K = 0.72, BOOK_H = 680;
 let S = null;
 
 const NOTE = '<svg viewBox="0 0 70 60" fill="none" stroke="#6a2a62" stroke-width="2.2" stroke-linecap="round"><path d="M22 44V12l28-6v32"/><ellipse cx="16" cy="46" rx="8" ry="6" fill="#6a2a62" fill-opacity=".15"/><ellipse cx="44" cy="40" rx="8" ry="6" fill="#6a2a62" fill-opacity=".15"/></svg>';
+
+// "Like & Subscribe" with a hand-drawn loop around "Subscribe" (The End page, --subscribe).
+function subscribeLine() {
+  const d = el("div", "subscribe");
+  const ring = el("span", "ring", "Subscribe");
+  ring.insertAdjacentHTML("beforeend", '<svg viewBox="0 0 330 120" preserveAspectRatio="none" fill="none" stroke="currentColor" ' +
+    'stroke-width="2.4" stroke-linecap="round"><path vector-effect="non-scaling-stroke" ' +
+    'd="M40 18 C120 -4 300 2 318 50 C330 95 170 116 70 104 C10 96 0 60 30 30 C50 14 80 10 110 8"/></svg>');
+  d.append("Like & ", ring);
+  return d;
+}
 
 function el(tag, cls, text) {
   const e = document.createElement(tag);
@@ -185,7 +201,7 @@ function inked(src, cls, ratio) {
 }
 
 window.setup = async cfg => {
-  const { pages, starts, lines, W, H, title, work, channel, logo, mark, highlight } = cfg;   // the notebook cover has no author line
+  const { pages, starts, lines, W, H, title, work, channel, logo, mark, highlight, subscribe } = cfg;   // the notebook cover has no author line
   document.body.style.width = W + "px";
   document.body.style.height = H + "px";
   // 9:16: the notebook's own portrait page, kept above the bottom 15% (platform buttons).
@@ -232,6 +248,7 @@ window.setup = async cfg => {
       c.append(el("div", "t", "The End"), el("div", "s", "thanks for listening"));
       if (channel) c.append(el("div", "s", channel));
       if (logo) c.append(inked(logo, "end-logo", logoRatio));
+      if (subscribe) c.append(subscribeLine());
       front.append(c);
     } else {
       sectionNo += 1;
