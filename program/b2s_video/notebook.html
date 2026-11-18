@@ -201,7 +201,7 @@ function inked(src, cls, ratio) {
 }
 
 window.setup = async cfg => {
-  const { pages, starts, lines, W, H, title, work, channel, logo, mark, highlight, subscribe } = cfg;   // the notebook cover has no author line
+  const { pages, starts, lines, W, H, title, work, channel, logo, mark, highlight, subscribe, fontSize } = cfg;   // the notebook cover has no author line
   document.body.style.width = W + "px";
   document.body.style.height = H + "px";
   // 9:16: the notebook's own portrait page, kept above the bottom 15% (platform buttons).
@@ -223,7 +223,7 @@ window.setup = async cfg => {
                                width: sceneW + "px", height: sceneH + "px", zoom: s });
   Object.assign(book.style, { width: bookW + "px", height: BOOK_H + "px" });
   book.style.setProperty("--pitch", PITCH + "px");
-  book.style.setProperty("--fs", (portrait ? 31 : 25) + "px");
+  book.style.setProperty("--fs", (fontSize || (portrait ? 31 : 25)) + "px");   // --font-size overrides
   book.querySelectorAll(".sheet,.coils").forEach(e => e.remove());
 
   const logoRatio = logo ? await imageRatio(logo) : 1, markRatio = mark ? await imageRatio(mark) : 1;

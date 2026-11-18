@@ -76,6 +76,16 @@ def test_long_pages_shrink(look):
 
 
 @needs_browser
+def test_font_size_changes_the_lyrics_and_still_fits():
+    small, big = make_job("hand-in-hand", "9x16", look="notebook"), make_job("hand-in-hand", "9x16", look="notebook")
+    big.font_size = 33
+    assert big.config()["fontSize"] == 33 and small.config()["fontSize"] is None
+    assert check_layout(big).overflow == []
+    t = [12.2]                                                  # a lyric page
+    assert render_stills(small, t)[0] != render_stills(big, t)[0]
+
+
+@needs_browser
 @pytest.mark.parametrize("fmt,size", [("16x9", (1920, 1080)), ("9x16", (1080, 1920))])
 def test_stills_have_the_right_size(fmt, size):
     shots, _ = render_stills(make_job("lantern", fmt), [1.0, 3.0, 19.0])

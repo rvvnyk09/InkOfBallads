@@ -76,3 +76,12 @@ def test_subscribe_is_on_by_default(command):
     base = [command, "--song", "s", "--audio", "a", "--out", "o"]
     assert cli.build_parser().parse_args(base).subscribe is True
     assert cli.build_parser().parse_args(base + ["--no-subscribe"]).subscribe is False
+
+
+def test_font_size_option(capsys):
+    base = ["render", "--song", "s", "--audio", "a", "--out", "o.mp4"]
+    assert cli.build_parser().parse_args(base).font_size is None
+    assert cli.build_parser().parse_args(base + ["--font-size", "32"]).font_size == 32
+    with pytest.raises(SystemExit):
+        cli.build_parser().parse_args(base + ["--font-size", "0"])
+    assert "must be more than 0" in capsys.readouterr().err

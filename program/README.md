@@ -69,7 +69,7 @@ After this, `b2s-video --help` works whenever the venv is active.
 b2s-video preview --song song.json --audio song.mp3 --turns-file turns.txt --format 9x16 --out preview.html
 ```
 
-This writes one HTML file that plays the song in its template with the audio: open it in any browser and press **Play** (or the space bar), and drag the bar to jump around. It uses the same template and timings as `render`, so it shows what the video will look like, without waiting for a render. It takes the same options (`--look`, `--format`, `--channel`, `--logo`, `--logo-mark`, `--no-subscribe`, `--line-timing`, `--highlight`, `--no-cover`, `--no-back-cover`).
+This writes one HTML file that plays the song in its template with the audio: open it in any browser and press **Play** (or the space bar), and drag the bar to jump around. It uses the same template and timings as `render`, so it shows what the video will look like, without waiting for a render. It takes the same options (`--look`, `--format`, `--channel`, `--logo`, `--logo-mark`, `--no-subscribe`, `--font-size`, `--line-timing`, `--highlight`, `--no-cover`, `--no-back-cover`).
 
 - Fonts are embedded, and nothing is loaded from the internet.
 - The audio is not copied into the file. The page finds it by its path relative to the HTML file, so keep the two in the same places (or make the preview again after moving them).
@@ -175,6 +175,7 @@ The tool reads `lyrics` (required) plus `title`, `channel`, `source.work` and `s
 | `--logo FILE` | none | your logo on the notebook cover, as a faint watermark behind the lyrics, and on The End page (see below) |
 | `--logo-mark FILE` | none | a small symbol on the purple page tabs, in place of the ♪ |
 | `--subscribe`, `--no-subscribe` | on | "Like & Subscribe" on The End page, under the logo, with "Subscribe" circled by hand (notebook look); `--no-subscribe` leaves it out |
+| `--font-size PX` | 31 (9x16), 25 (16x9) | size of the lyric handwriting in the notebook, in the template's design pixels; long lines still wrap and a page that would overflow still shrinks |
 | `--fps N` | 30 | |
 | `--workers N` | half your CPU cores, at most 4 | Chromium processes rendering frames in parallel |
 | `--crf N` | 20 | x264 quality; lower is better and bigger |

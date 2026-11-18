@@ -44,6 +44,13 @@ def _add_turns(p):
     p.add_argument("--turns-file", help="timestamps file: .txt (one per line, # comments) or .json {\"turns\": [...]}")
 
 
+def _positive(text: str) -> float:
+    value = float(text)
+    if value <= 0:
+        raise argparse.ArgumentTypeError(f"must be more than 0, not {text}")
+    return value
+
+
 def _add_look(p):
     p.add_argument("--format", choices=SIZES, default="16x9", help="16x9 = 1920x1080 (YouTube), 9x16 = 1080x1920 (Shorts, Reels, TikTok)")
     p.add_argument("--look", choices=LOOKS,
@@ -58,6 +65,9 @@ def _add_look(p):
     p.add_argument("--subscribe", action=argparse.BooleanOptionalAction, default=True,
                    help="write \"Like & Subscribe\" on The End page, with \"Subscribe\" circled by hand "
                         "(notebook look; on by default, --no-subscribe leaves it out)")
+    p.add_argument("--font-size", type=_positive, metavar="PX",
+                   help="size of the lyric handwriting in the notebook, in the template's design pixels "
+                        "(default 31 for 9x16, 25 for 16x9); long lines still wrap and pages still shrink to fit")
     p.add_argument("--highlight", action="store_true",
                    help="mark the line being sung (highlighter in the notebook, berry red in the storybook); "
                         "off by default; needs --line-timing even or per-line times")
@@ -160,7 +170,8 @@ def _job(args, song, pages, audio_seconds) -> Job:
     return Job(pages=pages, starts=starts, lines=lines, format=args.format, look=args.look or default_look(song),
                title=song_title(song), work=source_field(song, "work"), author=source_field(song, "author"),
                channel=args.channel, logo=_image(args, "logo"), mark=_image(args, "logo_mark"),
-               highlight=args.highlight, subscribe=args.subscribe, total=audio_seconds)
+               highlight=args.highlight, subscribe=args.subscribe, font_size=args.font_size,
+               total=audio_seconds)
 
 
 LOGO_TYPES = {".png": "image/png", ".webp": "image/webp", ".svg": "image/svg+xml", ".jpg": "image/jpeg", ".jpeg": "image/jpeg"}
