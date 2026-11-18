@@ -18,6 +18,7 @@ The user writes songs with the b2s skill, generates the music elsewhere, and kee
 | Cover logo (gold line art, transparent) | `C:\RV\Laptop Backup - 07.09.2022\Work\Book\InkOfBallads_lineart.png` |
 | Tab mark (quill only, transparent) | `C:\RV\Laptop Backup - 07.09.2022\Work\Book\InkOfBallads_quill.png` |
 | Timing checker | `scripts/check_timings.py` in this skill |
+| Short's "Watch the full song" pill (transparent 1080x1920 PNG) | `program\b2s_video\assets\full-song-pill.png`, drawn by `scripts/make_full_song_pill.py` in this skill |
 
 If a path does not exist, look for it nearby before asking; the user may have moved the folder. Use the Bash tool with forward slashes and quote every path, since they contain spaces. The program's README has the full option list; read it when the user asks for something this file does not cover.
 
@@ -31,7 +32,7 @@ If a path does not exist, look for it nearby before asking; the user may have mo
 - **Logos on**: `--logo` (cover, faint page watermark, The End page) and `--logo-mark` (quill on the page tabs).
 - **Like & Subscribe on**: the program writes, by default (no flag needed; `--no-subscribe` turns it off), "Like & Subscribe" in the notebook handwriting on The End page, under the logo, with "Subscribe" circled by hand. The user chose this (option 11 of 16 mock-ups in `CreateVideo\mockups\like-subscribe-on-page-*.png`) over a pill below the notebook: it stays on the page, so the 16:9 recipe in step 4 needs no change. It is in the 9:16 and 16:9 videos but not in the Short, which ends before The End page.
 - **No `--channel`**: the user removed "Book to Song" text. With a logo, the cover shows the logo instead.
-- **Short**: verse 1 and the first chorus, cut from the full video, no fades at either end, under 60 s.
+- **Short**: verse 1 and the first chorus, cut from the full video, no fades at either end, under 60 s, with the **"▶ Watch the full song" pill** fading in below the notebook for the last 3 s (step 5). The user chose this (option 1 of 5 in `CreateVideo\mockups\full-ballad-cue-*.png`) because it reads the same on phones and desktop: an earlier "Full ballad · tap below" pill with a down arrow only made sense on a phone, since YouTube puts the Related video link somewhere else on desktop. So never write "tap", "below" or arrows into it; the gold ▶ is what ties it to the ▶ on YouTube's Related video link.
 - Outputs go in `<song-folder>\out\`, named after the folder: `<folder>-9x16.mp4`, `<folder>-16x9.mp4`, `<folder>-short-<N>s.mp4` (N = rounded length), `<folder>-thumbnail.jpg` (16:9), `<folder>-thumbnail-9x16.jpg`, `<folder>-preview.html`, `sheet-9x16.png`, and `<folder>-youtube.txt` (the upload text, step 8; the skill writes the song JSON's `youtube` block first if it is missing).
 
 ## Workflow
@@ -88,11 +89,15 @@ Confirm both results with ffprobe: h264 at 1080x1920 and 1920x1080, aac, the MP3
 
 `check_timings.py` ends its report with a suggested Short (start, length, the last word inside it, and the ffmpeg command). The Short starts as the cover opens and ends after the first chorus's last word, before the next page begins to turn, so it neither cuts a word off nor ends mid-turn.
 
+Cut it with this command, not the shorter one the report prints: it also lays the "Watch the full song" pill over the last 3 s. `<pill>` is `program/b2s_video/assets/full-song-pill.png`, and `<length-3>` is the length minus 3, worked out by you (for a 45.7 s Short, 42.7):
+
 ```
-ffmpeg -v error -y -ss <start> -i "<folder>/out/<folder>-9x16.mp4" -t <length> -c:v libx264 -preset medium -crf 20 -pix_fmt yuv420p -color_range tv -colorspace bt709 -color_primaries bt709 -color_trc bt709 -c:a aac -b:a 192k -movflags +faststart "<folder>/out/<folder>-short-<N>s.mp4"
+ffmpeg -v error -y -ss <start> -i "<folder>/out/<folder>-9x16.mp4" -loop 1 -framerate 30 -i "<pill>" -t <length> -filter_complex "[1:v]format=rgba,fade=t=in:st=<length-3>:d=0.4:alpha=1[p];[0:v][p]overlay=0:0:enable='gte(t,<length-3>)':shortest=1,format=yuv420p[v]" -map "[v]" -map 0:a -c:v libx264 -preset medium -crf 20 -pix_fmt yuv420p -color_range tv -colorspace bt709 -color_primaries bt709 -color_trc bt709 -c:a aac -b:a 192k -movflags +faststart "<folder>/out/<folder>-short-<N>s.mp4"
 ```
 
-No fades: the user does not want them. When replacing an earlier Short, delete it first so the new file's created date is fresh (Windows keeps the old one otherwise, which confused the user once). Then verify the ending: transcribe the last 5 s of the Short with Whisper and make sure the chorus's last words are there.
+The pill fades in over 0.4 s and then stays; it does not move. It sits at rows 1470 to 1580, centred, in the green space under the notebook (the book ends at about row 1420), clear of YouTube's buttons on the right and its title, channel and Related video link at the bottom. If the pill's wording or look ever changes, change `scripts/make_full_song_pill.py` and run it again with the main venv's `python.exe` (`--fonts "<program>/b2s_video/assets/fonts" --out "<pill>"`); do not edit the PNG by hand.
+
+No fades on the video itself: the user does not want them (the pill's own fade-in is the one exception). When replacing an earlier Short, delete it first so the new file's created date is fresh (Windows keeps the old one otherwise, which confused the user once). Then verify the ending: transcribe the last 5 s of the Short with Whisper and make sure the chorus's last words are there.
 
 ### 6. Thumbnails
 
@@ -145,11 +150,12 @@ Run it again **whenever the `youtube` block changes** (a new description, more t
 
 ### 9. Check and report
 
-Grab a few frames to confirm what you made (the cover with the logo, a lyric page with watermark and quill tab, The End page with the logo and the circled "Like & Subscribe"): `ffmpeg -v error -y -i <video> -vf "select='eq(n\,30)+eq(n\,450)',scale=300:-1,tile=2x1" -frames:v 1 <png>` and Read the image. Do the same for the 16:9 file (scale to 480 wide) and check that the notebook fills the height, a little left of centre, on an even background with the logo on the right. Then tell the user, in plain words:
+Grab a few frames to confirm what you made (the cover with the logo, a lyric page with watermark and quill tab, The End page with the logo and the circled "Like & Subscribe"): `ffmpeg -v error -y -i <video> -vf "select='eq(n\,30)+eq(n\,450)',scale=300:-1,tile=2x1" -frames:v 1 <png>` and Read the image. Do the same for the 16:9 file (scale to 480 wide) and check that the notebook fills the height, a little left of centre, on an even background with the logo on the right. For the Short, grab a frame 4 s before the end (no pill) and one 0.5 s before the end (the pill fully shown under the notebook). Then tell the user, in plain words:
 
 - each file's path (as a clickable link) and length,
 - the upload text file and any placeholders left in it, and, if you wrote the `youtube` block, its titles and the made-for-kids and AI answers you chose, so the user can change them,
 - that the 16:9 file and the 16:9 thumbnail are for the regular YouTube upload, and the Short (or 9:16) with the 9:16 thumbnail for Shorts, Reels and TikTok,
+- that the Short's pill only works once its **Related video** is set: after the regular video is public, YouTube Studio > Content > Shorts > the Short > Details > Related video, pick the regular video (it can be set or changed after publishing),
 - which page times you changed and why ("page 5 turned during 'merry and strong'; moved to 1:00.0"),
 - anything still uncertain (lines Whisper did not hear, tight gaps),
 - that you checked frames and timings but did not watch or listen to the whole video, unless you did.
