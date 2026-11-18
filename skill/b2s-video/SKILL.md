@@ -137,7 +137,7 @@ Every video run ends with an upload text file. It comes from the `youtube` block
 
 ```
 Watch the full song: {FULL_VIDEO_URL}
-Watch the Short: {SHORT_URL}
+Watch the Shorts: {SHORT_URL}
 ```
 
 In the Short's description they go right after its hook; in the regular video's, just above the "More story songs" (or "More songs") channel link. The user asked for this on 2026-11-17 so that after uploading they paste the same two links into the same two placeholders everywhere and cannot put a link in the wrong place, even though each video then also links to itself. Never drop either line from either description.
@@ -171,7 +171,7 @@ Grab a few frames to confirm what you made (the cover with the logo, a lyric pag
 
 ## Things to avoid
 
-- Changing lyric wording or the song JSON. The video shows the lyrics exactly as written; if a line looks wrong, tell the user. The only changes allowed are adding a missing `youtube` block and adding the missing "Watch the full song" and "Watch the Short" link lines to an existing one, for the song being worked on (both step 8a).
+- Changing lyric wording or the song JSON. The video shows the lyrics exactly as written; if a line looks wrong, tell the user. The only changes allowed are adding a missing `youtube` block and adding the missing "Watch the full song" and "Watch the Shorts" link lines to an existing one, for the song being worked on (both step 8a).
 - Uploading or publishing anything. These are local files; uploading is the user's step.
 - Overwriting the user's originals: their MP3, JSON, a hand-made `turns.txt`, or older videos that are not this skill's outputs. Earlier files from this workflow (same names in `out\`) may be replaced.
 - Editing the program itself during a video request. If the template needs a change (layout, new option), say so, show a mock-up still first, and change it only when the user agrees; the program has its own tests (`program/.venv/Scripts/python.exe -m pytest` from `program`).
