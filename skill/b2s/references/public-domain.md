@@ -31,7 +31,7 @@
 - **Myth and drama:** The Odyssey, The Iliad, Beowulf, King Arthur legends, Shakespeare's plays, Greek and Norse myths.
 - **Literary novels:** Pride and Prejudice, Persuasion, Jane Eyre, Wuthering Heights, Great Expectations, Frankenstein, Les Miserables, The Great Gatsby (1925), The Metamorphosis.
 
-Many of the darker works need the general channel, or heavy softening for the kids channel.
+Many of the darker works need careful, non-graphic handling for a general audience.
 
 ## Redirect ideas for popular modern requests
 

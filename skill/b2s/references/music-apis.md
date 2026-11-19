@@ -4,10 +4,10 @@ Vendor terms and API shapes change quickly, so tell the user to confirm current 
 
 ## Preparing the lyrics
 
-The `lyrics` field is an array. Join it with line breaks into one text block before sending:
+The song is the single entry in the `versions` array, and it has a `lyrics` array. Join its lines with line breaks into one text block before sending:
 
-- Python: `lyrics_text = "\n".join(data["lyrics"])`
-- JavaScript: `data.lyrics.join("\n")`
+- Python: `v = data["versions"][0]; lyrics_text = "\n".join(v["lyrics"])`
+- JavaScript: `const v = data.versions[0]; v.lyrics.join("\n")`
 
 Section tags are already in the lyrics, in the style generators expect, such as `[Verse]` and `[Chorus]`. Some generators use lowercase tags (MiniMax shows `[verse]`), so lowercase them if needed. Support for uncommon tags varies, so test with a short song first.
 
