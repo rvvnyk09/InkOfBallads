@@ -1,6 +1,6 @@
 """Draw the Short's "Watch the full song" pill as a transparent 1080x1920 PNG.
 
-The Short overlays this image for its last 3 seconds (step 5 of the skill). The pill sits in the
+The Short overlays this image for its last 6 seconds (step 5 of the skill). The pill sits in the
 green space below the notebook, centred, clear of YouTube's buttons on the right and its title,
 channel and Related video link at the bottom. It has no arrow and no "tap", so it reads the same
 on phones and on desktop; the gold play icon matches the play icon on YouTube's Related video link.
